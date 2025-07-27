@@ -15,7 +15,7 @@ if cfg.get(cfg.dpiScale) != "Auto":
     os.environ["QT_SCALE_FACTOR"] = str(cfg.get(cfg.dpiScale))
 """
 
-def run_with_gui():
+if __name__ == '__main__':
     logging.info('程序启动')
     # 创建应用程序
     app = QApplication(sys.argv)

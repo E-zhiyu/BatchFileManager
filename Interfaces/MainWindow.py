@@ -14,20 +14,29 @@ class MainWindow(FluentWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.initNavigation()
+        self.initWindow()
+        self.initSubInterfaces()
+
+        # 结束启动动画
+        self.splashScreen.finish()
+
+    def initSubInterfaces(self):
+        """初始化子窗口"""
         pass
 
     def initNavigation(self):
         """初始化导航栏"""
         self.navigationInterface.setExpandWidth(200)  # 设置导航栏展开宽度
 
-        # 创建导航栏选项
+        """# 创建导航栏选项
         self.addSubInterface(self.homeInterface, FIF.HOME, '主页')
         self.addSubInterface(self.ruleListInterface, FIF.LAYOUT, '规则列表')
         self.addSubInterface(self.historyListInterface, FIF.HISTORY, '历史记录')
 
         # 添加导航栏底部按钮
         self.addSubInterface(self.settingInterface, FIF.SETTING, '设置', NavigationItemPosition.BOTTOM)
-        self.addSubInterface(self.infoInterface, FIF.INFO, '关于软件', NavigationItemPosition.BOTTOM)
+        self.addSubInterface(self.infoInterface, FIF.INFO, '关于软件', NavigationItemPosition.BOTTOM)"""
 
     def initWindow(self):
         """初始化窗口"""

@@ -6,7 +6,7 @@ import logging
 import os
 from datetime import datetime
 
-log_dir = './logs'
+log_dir = './log'
 
 
 class DailyFileHandler(logging.FileHandler):
