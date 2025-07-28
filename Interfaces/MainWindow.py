@@ -3,7 +3,9 @@ from PyQt6.QtCore import QSize, QEventLoop, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
-from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen
+from Interfaces.HomeInterface import HomeInterface
+
+from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen, setTheme, Theme
 from qfluentwidgets import FluentIcon as FIF
 
 version = 'v1.0.0'
@@ -14,34 +16,34 @@ class MainWindow(FluentWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.initNavigation()
+        setTheme(Theme.AUTO)
+
         self.initWindow()
         self.initSubInterfaces()
+        self.initNavigation()
 
         # 结束启动动画
         self.splashScreen.finish()
 
     def initSubInterfaces(self):
         """初始化子窗口"""
-        pass
+        self.homeInterface = HomeInterface(self)
 
     def initNavigation(self):
         """初始化导航栏"""
         self.navigationInterface.setExpandWidth(200)  # 设置导航栏展开宽度
 
-        """# 创建导航栏选项
+        # 创建导航栏选项
         self.addSubInterface(self.homeInterface, FIF.HOME, '主页')
-        self.addSubInterface(self.ruleListInterface, FIF.LAYOUT, '规则列表')
-        self.addSubInterface(self.historyListInterface, FIF.HISTORY, '历史记录')
 
         # 添加导航栏底部按钮
-        self.addSubInterface(self.settingInterface, FIF.SETTING, '设置', NavigationItemPosition.BOTTOM)
+        """self.addSubInterface(self.settingInterface, FIF.SETTING, '设置', NavigationItemPosition.BOTTOM)
         self.addSubInterface(self.infoInterface, FIF.INFO, '关于软件', NavigationItemPosition.BOTTOM)"""
 
     def initWindow(self):
         """初始化窗口"""
-        self.resize(1100, 750)
-        self.setMinimumWidth(760)
+        self.resize(800, 600)
+        self.setMinimumWidth(500)
         self.setWindowIcon(QIcon(':/qfluentwidgets/images/logo.png'))
         self.setWindowTitle(f'BatchFileManager-{version}')
 
