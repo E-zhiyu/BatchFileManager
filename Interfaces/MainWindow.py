@@ -4,8 +4,10 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
 from Interfaces.HomeInterface import HomeInterface
+from Interfaces.SettingInterface import SettingInterface
+from Interfaces.InfoInterface import InfoInterface
 
-from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen, setTheme, Theme
+from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen
 from qfluentwidgets import FluentIcon as FIF
 
 version = 'v1.0.0'
@@ -16,8 +18,6 @@ class MainWindow(FluentWindow):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        setTheme(Theme.AUTO)
-
         self.initWindow()
         self.initSubInterfaces()
         self.initNavigation()
@@ -28,6 +28,8 @@ class MainWindow(FluentWindow):
     def initSubInterfaces(self):
         """初始化子窗口"""
         self.homeInterface = HomeInterface(self)
+        self.settingInterface = SettingInterface(self)
+        self.infoInterface = InfoInterface(self)
 
     def initNavigation(self):
         """初始化导航栏"""
@@ -37,8 +39,8 @@ class MainWindow(FluentWindow):
         self.addSubInterface(self.homeInterface, FIF.HOME, '主页')
 
         # 添加导航栏底部按钮
-        """self.addSubInterface(self.settingInterface, FIF.SETTING, '设置', NavigationItemPosition.BOTTOM)
-        self.addSubInterface(self.infoInterface, FIF.INFO, '关于软件', NavigationItemPosition.BOTTOM)"""
+        self.addSubInterface(self.settingInterface, FIF.SETTING, '设置', NavigationItemPosition.BOTTOM)
+        self.addSubInterface(self.infoInterface, FIF.INFO, '关于软件', NavigationItemPosition.BOTTOM)
 
     def initWindow(self):
         """初始化窗口"""
