@@ -8,6 +8,6 @@ class Config(QConfig):
     pass
 
 
-config_path = './AppConfig'
+config_path = './config/app_config.json'
 cfg = Config()
 qconfig.load(config_path, cfg)
