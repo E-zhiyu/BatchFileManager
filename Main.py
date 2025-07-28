@@ -7,6 +7,7 @@ from AppConfig.config import cfg
 from Interfaces.MainWindow import MainWindow
 
 from Logs.log_recorder import *
+from qfluentwidgets import FluentTranslator
 
 # 启用DPI比例
 """
@@ -19,6 +20,10 @@ if __name__ == '__main__':
     logging.info('程序启动')
     # 创建应用程序
     app = QApplication(sys.argv)
+
+    # 设置翻译器
+    translator = FluentTranslator()
+    app.installTranslator(translator)
 
     # 创建主窗口
     w = MainWindow()
