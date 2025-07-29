@@ -3,7 +3,7 @@ out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 backend/
-src/META-INF/
+Java_Backend/src/META-INF/
 
 ### Eclipse ###
 .apt_generated
@@ -30,7 +30,7 @@ bin/
 ### Mac OS ###
 .DS_Store
 
-### Python ###
+### PyCharm ###
 .venv/
 log/
 config/
