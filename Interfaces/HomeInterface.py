@@ -1,9 +1,11 @@
 """主页模块"""
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem
 
 from qfluentwidgets import PushButton, TableWidget
 from qfluentwidgets import FluentIcon as FIF
+
+from AppConfig.config import cfg
 
 
 class HomeInterface(QWidget):
@@ -54,4 +56,22 @@ class HomeInterface(QWidget):
         self.fileTableView.verticalHeader().hide()  # 隐藏行序号
         self.fileTableView.setHorizontalHeaderLabels(['文件名', '备注', '文件类型', '修改日期', '大小'])
         self.fileTableView.setSortingEnabled(True)  # 启用表头排序
-        self.fileTableView.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)  # 设置表格宽度自适应窗口宽度
+
+        # 恢复软件关闭前的列宽
+        columnWidthList = cfg.get(cfg.tableColumnWidth)
+        if columnWidthList is not None:
+            for i, width in enumerate(columnWidthList):
+                if width:
+                    self.fileTableView.setColumnWidth(i, width)
+        else:
+            self.fileTableView.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # 备注列拉伸以适应窗口
+
+        """以下代码仅用于测试"""
+        """files = [
+            ['run.bat', '启动MC服务器', '.bat', '2025-7-29', '2KB'],
+            ['start.bat', '启动泰拉瑞亚服务器', '.bat', '2025-7-29', '2KB']
+        ]
+        self.fileTableView.setRowCount(len(files))
+        for index, file in enumerate(files):
+            for i in range(5):
+                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))"""

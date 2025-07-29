@@ -3,6 +3,7 @@ from PyQt6.QtCore import QSize, QEventLoop, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 
+from AppConfig.config import cfg
 from Interfaces.HomeInterface import HomeInterface
 from Interfaces.SettingInterface import SettingInterface
 from Interfaces.InfoInterface import InfoInterface
@@ -61,3 +62,9 @@ class MainWindow(FluentWindow):
         loop = QEventLoop(self)
         QTimer.singleShot(500, loop.quit)
         loop.exec()
+
+    def closeEvent(self, event):
+        """重写关闭事件"""
+        fileTableWidth = [self.homeInterface.fileTableView.columnWidth(i) for i in range(5)]
+        cfg.set(cfg.tableColumnWidth, fileTableWidth)
+        super().closeEvent(event)

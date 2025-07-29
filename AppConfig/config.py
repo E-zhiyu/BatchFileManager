@@ -5,7 +5,9 @@ from qfluentwidgets import (qconfig, QConfig, OptionsConfigItem, OptionsValidato
 
 class Config(QConfig):
     """应用配置项"""
-    pass
+    tableColumnWidth = ConfigItem(  # 文件列表列宽
+        'FileTableView', 'ColumnWidth', None
+    )
 
 
 config_path = './config/app_config.json'
