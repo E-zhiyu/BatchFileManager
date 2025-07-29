@@ -70,14 +70,14 @@ class HomeInterface(QWidget):
                     self.fileTableView.setColumnWidth(i, width)
 
         """以下代码仅用于测试"""
-        files = [
+        """files = [
             ['run.bat', '启动MC服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB'],
             ['start.bat', '启动泰拉瑞亚服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB']
         ]
         self.fileTableView.setRowCount(len(files))
         for index, file in enumerate(files):
             for i in range(6):
-                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))
+                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))"""
 
     def addFileAction(self):
         """添加文件行为"""
@@ -87,11 +87,9 @@ class HomeInterface(QWidget):
             '',
             ' (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
         )[0]
-        print(files)
         if files:
             cnt = JarConnector('./backend/fileAdder.jar', files)
             file_infos = cnt.received_data  # [[文件名,修改日期,后缀名,文件大小],...]
-            print('Infos:',file_infos)
             if file_infos is not None:
                 currentRowCount = self.fileTableView.rowCount()
 
