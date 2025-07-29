@@ -110,7 +110,7 @@ public class FileAdder {
      */
     static private void sendInfos(List<List<String>> fileInfos) {
         JSONArray jsonArray = new JSONArray(fileInfos);
-        System.out.println(jsonArray + "\n");
+        System.out.println(jsonArray);
     }
 
     public static void main(String[] args) {
