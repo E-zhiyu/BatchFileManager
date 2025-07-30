@@ -67,7 +67,6 @@ class HomeInterface(QWidget):
         self.fileTableView.setBorderVisible(True)  # 设置边界可见性
         self.fileTableView.setBorderRadius(5)  # 设置边界圆角弧度
         self.fileTableView.setColumnCount(6)  # 设置列数
-        # self.fileTableView.setRowCount(0)  # 设置行数
         self.fileTableView.verticalHeader().hide()  # 隐藏行序号
         self.fileTableView.setHorizontalHeaderLabels(['文件名', '备注', '文件路径', '修改日期', '文件类型', '大小'])
         self.fileTableView.setSortingEnabled(True)  # 启用表头排序
@@ -92,11 +91,38 @@ class HomeInterface(QWidget):
             for range_obj in selectedRanges:
                 selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
 
+            allFilePath = []
             for i in selectedRowsIndex:
                 item = self.fileTableView.item(i, 2)
-                filePath = item.text()
+                oneFilePath = item.text()
+                allFilePath.append(oneFilePath)
 
-                os.startfile(filePath)
+            fileRun_cnt = JarConnector('./backend/fileRunner.jar', allFilePath)
+            success, failed = fileRun_cnt.received_data
+            if success and not failed:
+                InfoBar.success(
+                    '成功',
+                    f'已成功运行{success}个文件',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+            elif success and failed:
+                InfoBar.warning(
+                    '提示',
+                    f'成功运行{success}个文件，{failed}个文件运行失败',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+            else:
+                InfoBar.error(
+                    '错误',
+                    '所有文件均未成功运行',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
         else:
             InfoBar.warning(
                 '提示',
@@ -117,8 +143,8 @@ class HomeInterface(QWidget):
         )[0]
 
         if files:
-            cnt = JarConnector('./backend/fileAdder.jar', files)
-            file_infos = cnt.received_data  # [[文件名,修改日期,后缀名,文件大小],...]
+            fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
+            file_infos = fileAdd_cnt.received_data  # [[文件名,修改日期,后缀名,文件大小],...]
             if file_infos is not None:
                 currentRowCount = self.fileTableView.rowCount()
 
