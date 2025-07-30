@@ -183,6 +183,14 @@ class HomeInterface(QWidget):
                 i += 1
 
             logging.info(f'已删除{i}个文件')
+        else:
+            InfoBar.warning(
+                '提示',
+                '请选择至少一个文件',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
 
             self.saveContents()
 
