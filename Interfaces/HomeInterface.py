@@ -47,6 +47,7 @@ class HomeInterface(QWidget):
 
         self.removeButton = PushButton(FIF.DELETE.icon(color='red'), '删除文件')
         self.btnLayout.addWidget(self.removeButton)
+        self.removeButton.clicked.connect(self.removeFileAction)
 
         # 文件列表视图
         self.fileTableView = TableWidget(self)
@@ -70,14 +71,14 @@ class HomeInterface(QWidget):
                     self.fileTableView.setColumnWidth(i, width)
 
         """以下代码仅用于测试"""
-        """files = [
+        files = [
             ['run.bat', '启动MC服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB'],
             ['start.bat', '启动泰拉瑞亚服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB']
         ]
         self.fileTableView.setRowCount(len(files))
         for index, file in enumerate(files):
             for i in range(6):
-                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))"""
+                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))
 
     def addFileAction(self):
         """添加文件行为"""
@@ -85,8 +86,9 @@ class HomeInterface(QWidget):
             None,
             '添加文件',
             '',
-            ' (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
+            '批处理和命令脚本 (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
         )[0]
+
         if files:
             cnt = JarConnector('./backend/fileAdder.jar', files)
             file_infos = cnt.received_data  # [[文件名,修改日期,后缀名,文件大小],...]
@@ -100,3 +102,27 @@ class HomeInterface(QWidget):
                     self.fileTableView.setItem(currentRowCount + index, 3, QTableWidgetItem(oneInfo[1]))
                     self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
                     self.fileTableView.setItem(currentRowCount + index, 5, QTableWidgetItem(oneInfo[3]))
+
+            self.saveChange()
+
+    def removeFileAction(self):
+        """删除文件行为"""
+        selectedRanges = self.fileTableView.selectedRanges()
+        if selectedRanges:
+            # 收集所有要删除的行索引（从大到小排序）
+            rows_to_delete = set()
+            for range_obj in selectedRanges:
+                rows_to_delete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+
+            # 从大到小删除（避免索引变化问题）
+            for row in sorted(rows_to_delete, reverse=True):
+                self.fileTableView.removeRow(row)
+
+            self.saveChange()
+            return True
+        else:
+            return False
+
+    def saveChange(self):
+        """将表格的变化保存至文件"""
+        pass
