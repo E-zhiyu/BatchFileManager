@@ -14,8 +14,10 @@ import java.util.Date;
 import java.util.ArrayList;
 import java.util.List;
 
+import PythonConnector.GrandProcessConnector;
 
-public class FileAdder {
+
+public class FileAdder implements GrandProcessConnector<List<String>, List<List<String>>> {
     static List<String> filePaths;
     static List<List<String>> fileInfos;
 
@@ -24,7 +26,8 @@ public class FileAdder {
      *
      * @return 接收到的文件路径列表
      */
-    static private List<String> receiveData() {
+    @Override
+    public List<String> receiveData() {
         // 读取标准输入
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
 
@@ -46,13 +49,25 @@ public class FileAdder {
         return allFilePaths;
     }
 
+
+    /**
+     * 发送获取到的文件信息
+     *
+     * @param fileInfos 需要发送的文件信息列表
+     */
+    @Override
+    public void sendData(List<List<String>> fileInfos) {
+        JSONArray jsonArray = new JSONArray(fileInfos);
+        System.out.println(jsonArray);
+    }
+
     /**
      * 获取文件信息
      *
      * @param filePaths 文件路径列表
      * @return 获取到的文件信息列表
      */
-    static private List<List<String>> getFileInfos(List<String> filePaths) {
+    private List<List<String>> getFileInfos(List<String> filePaths) {
         List<List<String>> allFileInfos = new ArrayList<>();
 
         for (String onePath : filePaths) {
@@ -103,19 +118,11 @@ public class FileAdder {
         return allFileInfos;
     }
 
-    /**
-     * 发送获取到的文件信息
-     *
-     * @param fileInfos 需要发送的文件信息列表
-     */
-    static private void sendInfos(List<List<String>> fileInfos) {
-        JSONArray jsonArray = new JSONArray(fileInfos);
-        System.out.println(jsonArray);
-    }
-
     public static void main(String[] args) {
-        filePaths = receiveData();
-        fileInfos = getFileInfos(filePaths);
-        sendInfos(fileInfos);
+        FileAdder fileAdder = new FileAdder();
+
+        filePaths = fileAdder.receiveData();
+        fileInfos = fileAdder.getFileInfos(filePaths);
+        fileAdder.sendData(fileInfos);
     }
 }
