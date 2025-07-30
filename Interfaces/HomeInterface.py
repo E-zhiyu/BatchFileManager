@@ -241,13 +241,17 @@ class HomeInterface(QWidget):
 
     def loadContents(self):
         """加载已保存的文件内容"""
-        with open('./config/fileTableContents.json', 'r', encoding='utf-8') as f:
-            allRows = json.load(f)
 
-            # 设置表格行数
-            self.fileTableView.setRowCount(len(allRows))
+        try:
+            with open('./config/fileTableContents.json', 'r', encoding='utf-8') as f:
+                allRows = json.load(f)
 
-            # 依次添加文件信息
-            for i, row in enumerate(allRows):
-                for j, column in enumerate(row):
-                    self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+                # 设置表格行数
+                self.fileTableView.setRowCount(len(allRows))
+
+                # 依次添加文件信息
+                for i, row in enumerate(allRows):
+                    for j, column in enumerate(row):
+                        self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+        except FileNotFoundError:
+            pass
