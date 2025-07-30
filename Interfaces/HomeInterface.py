@@ -1,15 +1,16 @@
 """主页模块"""
+import json
+import os
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
 
-from qfluentwidgets import PushButton, TableWidget
+from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition
 from qfluentwidgets import FluentIcon as FIF
 
 from AppConfig.config import cfg
 
 from Connector.JarConnector import JarConnector
-
-import json
 
 
 class HomeInterface(QWidget):
@@ -45,6 +46,7 @@ class HomeInterface(QWidget):
 
         self.runButton = PushButton(FIF.PLAY.icon(color='green'), '运行文件')
         self.btnLayout.addWidget(self.runButton)
+        self.runButton.clicked.connect(self.runFileAction)
 
         self.addButton = PushButton(FIF.ADD, "添加文件")
         self.btnLayout.addWidget(self.addButton)
@@ -53,6 +55,10 @@ class HomeInterface(QWidget):
         self.removeButton = PushButton(FIF.DELETE.icon(color='red'), '删除文件')
         self.btnLayout.addWidget(self.removeButton)
         self.removeButton.clicked.connect(self.removeFileAction)
+
+        self.openFolderButton = PushButton(FIF.FOLDER, '打开所在文件夹')
+        self.btnLayout.addWidget(self.openFolderButton)
+        self.openFolderButton.clicked.connect(self.openFolderAction)
 
         # 文件列表视图
         self.fileTableView = TableWidget(self)
@@ -75,18 +81,34 @@ class HomeInterface(QWidget):
                 if width:
                     self.fileTableView.setColumnWidth(i, width)
 
-        """以下代码仅用于测试"""
-        """files = [
-            ['run.bat', '启动MC服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB'],
-            ['start.bat', '启动泰拉瑞亚服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB']
-        ]
-        self.fileTableView.setRowCount(len(files))
-        for index, file in enumerate(files):
-            for i in range(6):
-                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))"""
+    def runFileAction(self):
+        """运行文件行为"""
+
+        selectedRanges = self.fileTableView.selectedRanges()
+
+        if selectedRanges:
+            # 收集所有要删除的行索引（从大到小排序）
+            selectedRowsIndex = set()
+            for range_obj in selectedRanges:
+                selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+
+            for i in selectedRowsIndex:
+                item = self.fileTableView.item(i, 2)
+                filePath = item.text()
+
+                os.startfile(filePath)
+        else:
+            InfoBar.warning(
+                '提示',
+                '请选择至少一个文件',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
 
     def addFileAction(self):
         """添加文件行为"""
+
         files = QFileDialog.getOpenFileNames(
             None,
             '添加文件',
@@ -112,21 +134,48 @@ class HomeInterface(QWidget):
 
     def removeFileAction(self):
         """删除文件行为"""
+
         selectedRanges = self.fileTableView.selectedRanges()
         if selectedRanges:
             # 收集所有要删除的行索引（从大到小排序）
-            rows_to_delete = set()
+            rowsToDelete = set()
             for range_obj in selectedRanges:
-                rows_to_delete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+                rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
 
             # 从大到小删除（避免索引变化问题）
-            for row in sorted(rows_to_delete, reverse=True):
+            for row in sorted(rowsToDelete, reverse=True):
                 self.fileTableView.removeRow(row)
 
             self.saveContents()
             return True
         else:
             return False
+
+    def openFolderAction(self):
+        """打开文件夹行为"""
+
+        selectedRanges = self.fileTableView.selectedRanges()
+
+        if selectedRanges:
+            # 收集所有要删除的行索引（从大到小排序）
+            selectedRowsIndex = set()
+            for range_obj in selectedRanges:
+                selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+
+            for i in selectedRowsIndex:
+                item = self.fileTableView.item(i, 2)
+                filePath = item.text()
+                directory = os.path.dirname(filePath).replace('/', '\\')
+
+                os.system(f'explorer "{directory}"')
+        else:
+            InfoBar.warning(
+                '提示',
+                '请选择至少一个文件',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
 
     def saveContents(self):
         """将表格的内容保存至文件"""
