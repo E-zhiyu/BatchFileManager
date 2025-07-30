@@ -9,8 +9,8 @@ from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition
 from qfluentwidgets import FluentIcon as FIF
 
 from AppConfig.config import cfg
-
 from Connector.JarConnector import JarConnector
+from Logs.log_recorder import logging
 
 
 class HomeInterface(QWidget):
@@ -84,8 +84,9 @@ class HomeInterface(QWidget):
         """运行文件行为"""
 
         selectedRanges = self.fileTableView.selectedRanges()
-
         if selectedRanges:
+            logging.info('运行文件中……')
+
             # 收集所有要删除的行索引（从大到小排序）
             selectedRowsIndex = set()
             for range_obj in selectedRanges:
@@ -123,6 +124,7 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+            logging.info(f'成功{success}个，失败{failed}个')
         else:
             InfoBar.warning(
                 '提示',
@@ -143,6 +145,8 @@ class HomeInterface(QWidget):
         )[0]
 
         if files:
+            logging.info('开始添加文件……')
+
             fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
             file_infos = fileAdd_cnt.received_data  # [[文件名,修改日期,后缀名,文件大小],...]
             if file_infos is not None:
@@ -156,6 +160,8 @@ class HomeInterface(QWidget):
                     self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
                     self.fileTableView.setItem(currentRowCount + index, 5, QTableWidgetItem(oneInfo[3]))
 
+                logging.info(f'成功添加{len(files)}个文件')
+
             self.saveContents()
 
     def removeFileAction(self):
@@ -163,19 +169,22 @@ class HomeInterface(QWidget):
 
         selectedRanges = self.fileTableView.selectedRanges()
         if selectedRanges:
+            logging.info('开始删除文件……')
+
             # 收集所有要删除的行索引（从大到小排序）
             rowsToDelete = set()
             for range_obj in selectedRanges:
                 rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
 
             # 从大到小删除（避免索引变化问题）
+            i = 0
             for row in sorted(rowsToDelete, reverse=True):
                 self.fileTableView.removeRow(row)
+                i += 1
+
+            logging.info(f'已删除{i}个文件')
 
             self.saveContents()
-            return True
-        else:
-            return False
 
     def openFolderAction(self):
         """打开文件夹行为"""
