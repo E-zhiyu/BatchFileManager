@@ -9,6 +9,8 @@ from AppConfig.config import cfg
 
 from Connector.JarConnector import JarConnector
 
+import json
+
 
 class HomeInterface(QWidget):
     """主页类"""
@@ -29,6 +31,9 @@ class HomeInterface(QWidget):
 
         # 初始化控件
         self.initControls()
+
+        # 加载已保存的文件内容
+        self.loadContents()
 
     def initControls(self):
         """初始化控件"""
@@ -71,14 +76,14 @@ class HomeInterface(QWidget):
                     self.fileTableView.setColumnWidth(i, width)
 
         """以下代码仅用于测试"""
-        files = [
+        """files = [
             ['run.bat', '启动MC服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB'],
             ['start.bat', '启动泰拉瑞亚服务器', 'D:/MyFolder', '2025-7-29', '.bat', '2KB']
         ]
         self.fileTableView.setRowCount(len(files))
         for index, file in enumerate(files):
             for i in range(6):
-                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))
+                self.fileTableView.setItem(index, i, QTableWidgetItem(file[i]))"""
 
     def addFileAction(self):
         """添加文件行为"""
@@ -103,7 +108,7 @@ class HomeInterface(QWidget):
                     self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
                     self.fileTableView.setItem(currentRowCount + index, 5, QTableWidgetItem(oneInfo[3]))
 
-            self.saveChange()
+            self.saveContents()
 
     def removeFileAction(self):
         """删除文件行为"""
@@ -118,11 +123,39 @@ class HomeInterface(QWidget):
             for row in sorted(rows_to_delete, reverse=True):
                 self.fileTableView.removeRow(row)
 
-            self.saveChange()
+            self.saveContents()
             return True
         else:
             return False
 
-    def saveChange(self):
-        """将表格的变化保存至文件"""
-        pass
+    def saveContents(self):
+        """将表格的内容保存至文件"""
+
+        # 获取表格内容
+        allRows = []
+        for row in range(self.fileTableView.rowCount()):
+            oneRow = []
+            for column in range(self.fileTableView.columnCount()):
+                item = self.fileTableView.item(row, column)
+                try:
+                    oneRow.append(item.text())
+                except AttributeError:
+                    oneRow.append(None)
+            allRows.append(oneRow)
+
+        # 保存至文件
+        with open('./config/fileTableContents.json', 'w', encoding='utf-8') as f:
+            json.dump(allRows, f, ensure_ascii=False, indent=4)
+
+    def loadContents(self):
+        """加载已保存的文件内容"""
+        with open('./config/fileTableContents.json', 'r', encoding='utf-8') as f:
+            allRows = json.load(f)
+
+            # 设置表格行数
+            self.fileTableView.setRowCount(len(allRows))
+
+            # 依次添加文件信息
+            for i, row in enumerate(allRows):
+                for j, column in enumerate(row):
+                    self.fileTableView.setItem(i, j, QTableWidgetItem(column))
