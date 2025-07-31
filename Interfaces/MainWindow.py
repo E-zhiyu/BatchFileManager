@@ -11,7 +11,7 @@ from Interfaces.InfoInterface import InfoInterface
 from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen
 from qfluentwidgets import FluentIcon as FIF
 
-version = 'v1.0.0'
+from Interfaces import version
 
 
 class MainWindow(FluentWindow):
