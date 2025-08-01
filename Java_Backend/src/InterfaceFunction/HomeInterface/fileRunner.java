@@ -2,25 +2,23 @@ package InterfaceFunction.HomeInterface;
 
 import PythonConnector.GrandProcessConnector;
 import org.json.JSONArray;
-import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
 
-public class fileRunner implements GrandProcessConnector<List<String>, List<Integer>> {
-    List<String> filesToRun;
-    List<Integer> successAndFailed;
+public class fileRunner implements GrandProcessConnector<String, Integer> {
+    String fileToRun;
+    Integer isRunningSuccess;
 
     /**
      * @return 从主进程获取到的文件路径列表
      */
     @Override
-    public List<String> receiveData() {
-        List<String> filesToRun = new ArrayList<>();
+    public String receiveData() {
+        String fileToRun = "";
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 
         //解析json数据
@@ -29,74 +27,97 @@ public class fileRunner implements GrandProcessConnector<List<String>, List<Inte
             JSONArray ja = new JSONArray(jsonInput);
 
             for (int i = 0; i < ja.length(); i++) {
-                filesToRun.add(ja.getString(i));
+                fileToRun = ja.getString(i);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return filesToRun;
+        return fileToRun;
     }
 
     /**
      * @param flag 成功运行与运行失败的文件数
      */
     @Override
-    public void sendData(List<Integer> flag) {
-        JSONArray jsonArray = new JSONArray(flag.toString());
+    public void sendData(Integer flag) {
+        List<Integer> l = new ArrayList<>();
+        l.add(flag);
+
+        JSONArray jsonArray = new JSONArray(l);
         System.out.println(jsonArray);
     }
 
     /**
      * 批量运行文件
      *
-     * @param filesToRun 待运行文件的路径列表
+     * @param fileToRun 待运行文件的路径列表
      * @return 成功运行与运行失败的文件数
      */
-    List<Integer> runFiles(List<String> filesToRun) {
-        int success = 0;
-        int failed = 0;
+    Integer runFiles(String fileToRun) throws IOException {
+        int isRunningSuccess = 0;
 
-        for (String filePath : filesToRun) {
-            File file = new File(filePath);
-            ProcessBuilder builder = new ProcessBuilder("cmd", "/c", "start", filePath);
+        //创建与主进程（客户端）的连接
+        ServerSocket serverSocket = new ServerSocket(8080);
+        Socket clientSocket = serverSocket.accept();
+        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+        BufferedReader in = new BufferedReader(
+                new InputStreamReader(clientSocket.getInputStream()));
 
-            //设置工作目录
-            builder.directory(file.getParentFile());
+        //创建文件运行进程
+        File file = new File(fileToRun);
+        ProcessBuilder builder = new ProcessBuilder("cmd", "/c", file.getAbsolutePath());
 
-            // 合并错误流
-            builder.redirectErrorStream(true);
+        builder.directory(file.getParentFile());  //设置工作目录
+        builder.redirectErrorStream(true);  // 合并错误流
 
-            //创建并启动进程
-            try {
-                Process process = builder.start();
+        //创建并启动进程
+        try {
+            Process process = builder.start();
 
-                // 读取输出
-//                BufferedReader reader = new BufferedReader(
-//                        new InputStreamReader(process.getInputStream()));
-//                String line;
-//                while ((line = reader.readLine()) != null) {
-//                    JSONObject jo = new JSONObject(line);
-//                    System.out.println(jo);
-//                }
+            // 读取进程输出并发送到客户端
+            new Thread(() -> {
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        out.println(line);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
 
-                //成功文件数加一
-                success++;
-            } catch (IOException e) {
-                failed++;
-            }
+            // 从客户端读取命令并写入进程
+            new Thread(() -> {
+                try (BufferedWriter writer = new BufferedWriter(
+                        new OutputStreamWriter(process.getOutputStream()))) {
+                    String command;
+                    while ((command = in.readLine()) != null && !command.isEmpty()) {
+                        writer.write(command);
+                        writer.newLine();
+                        writer.flush();
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }).start();
+
+            isRunningSuccess = 1;
+        } catch (IOException _) {
         }
 
-        List<Integer> successAndFailed = new ArrayList<>();
-        successAndFailed.add(success);
-        successAndFailed.add(failed);
-        return successAndFailed;
+        return isRunningSuccess;
     }
 
     public static void main(String[] args) {
         fileRunner fileRunner = new fileRunner();
-        fileRunner.filesToRun = fileRunner.receiveData();
-        fileRunner.successAndFailed = fileRunner.runFiles(fileRunner.filesToRun);
-        fileRunner.sendData(fileRunner.successAndFailed);
+        fileRunner.fileToRun = fileRunner.receiveData();
+        try {
+            fileRunner.isRunningSuccess = fileRunner.runFiles(fileRunner.fileToRun);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        fileRunner.sendData(fileRunner.isRunningSuccess);
     }
 }
