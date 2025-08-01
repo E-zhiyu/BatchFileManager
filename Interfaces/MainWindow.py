@@ -7,6 +7,7 @@ from AppConfig.config import cfg
 from Interfaces.HomeInterface import HomeInterface
 from Interfaces.SettingInterface import SettingInterface
 from Interfaces.InfoInterface import InfoInterface
+from Interfaces.CMDInterface import CMDInterface
 
 from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen
 from qfluentwidgets import FluentIcon as FIF
@@ -31,6 +32,7 @@ class MainWindow(FluentWindow):
         self.homeInterface = HomeInterface(self)
         self.settingInterface = SettingInterface(self)
         self.infoInterface = InfoInterface(self)
+        self.cmdInterface = CMDInterface(self)
 
     def initNavigation(self):
         """初始化导航栏"""
@@ -38,6 +40,7 @@ class MainWindow(FluentWindow):
 
         # 创建导航栏选项
         self.addSubInterface(self.homeInterface, FIF.HOME, '主页')
+        self.addSubInterface(self.cmdInterface, FIF.COMMAND_PROMPT, '控制台')
 
         # 添加导航栏底部按钮
         self.addSubInterface(self.settingInterface, FIF.SETTING, '设置', NavigationItemPosition.BOTTOM)

@@ -87,44 +87,35 @@ class HomeInterface(QWidget):
         if selectedRanges:
             logging.info('运行文件中……')
 
-            # 收集所有要删除的行索引（从大到小排序）
-            selectedRowsIndex = set()
+            # 收集选中的行索引（从大到小排序）
+            selectedRowsIndex = []
             for range_obj in selectedRanges:
-                selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+                selectedRowsIndex.append(range(range_obj.bottomRow(), range_obj.topRow() + 1))
 
-            allFilePath = []
-            for i in selectedRowsIndex:
-                item = self.fileTableView.item(i, 2)
-                oneFilePath = item.text()
-                allFilePath.append(oneFilePath)
-
-            fileRun_cnt = JarConnector('./backend/fileRunner.jar', allFilePath)
-            success, failed = fileRun_cnt.received_data
-            if success and not failed:
-                InfoBar.success(
-                    '成功',
-                    f'已成功运行{success}个文件',
-                    position=InfoBarPosition.TOP,
-                    duration=1500,
-                    parent=self.parentWindow
-                )
-            elif success and failed:
+            # 判断是否多选
+            if len(selectedRowsIndex) > 1:
                 InfoBar.warning(
-                    '提示',
-                    f'成功运行{success}个文件，{failed}个文件运行失败',
-                    position=InfoBarPosition.TOP,
+                    "提示",
+                    "只能同时运行一个文件",
                     duration=1500,
+                    position=InfoBarPosition.TOP,
                     parent=self.parentWindow
                 )
             else:
-                InfoBar.error(
-                    '错误',
-                    '所有文件均未成功运行',
+                item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
+                filePath = item.text()
+                fileRun_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
+                fileRun_cnt.sendData()
+                self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
+
+                InfoBar.success(
+                    '开始运行',
+                    '请前往控制台界面查看运行详情',
                     position=InfoBarPosition.TOP,
                     duration=1500,
                     parent=self.parentWindow
                 )
-            logging.info(f'成功{success}个，失败{failed}个')
+                logging.info('文件成功运行')
         else:
             InfoBar.warning(
                 '提示',

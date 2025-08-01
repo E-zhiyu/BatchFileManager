@@ -13,7 +13,6 @@ class JarConnector:
     def __init__(self, target: str, sent_data):
         self.target = target  # 目标.jar文件路径
         self.sent_data = sent_data  # 需要发送的数据
-        self.received_data = None  # 接收到的数据
 
         # 启动Java进程
         self.java_process = subprocess.Popen(
@@ -23,18 +22,17 @@ class JarConnector:
             text=True
         )
 
-        self.sendData()
-        self.receiveData()
-
     def sendData(self):
-        """发送数据"""
-
+        """通过标准输入向Java子进程发送数据"""
         # 将列表转换为JSON字符串并发送
         json_data = json.dumps(self.sent_data)
         self.java_process.stdin.write(json_data + "\n")  # 添加换行符作为结束标记
         self.java_process.stdin.flush()  # 确保数据被发送
 
     def receiveData(self):
-        """接收数据并保存"""
+        """从Java子进程读取标准输出中的数据"""
         json_data = self.java_process.stdout.readline()
-        self.received_data = json.loads(json_data)
+        try:
+            return json.loads(json_data)
+        except json.decoder.JSONDecodeError:
+            return None

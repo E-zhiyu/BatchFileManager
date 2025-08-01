@@ -103,10 +103,11 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
                 }
             }).start();
 
-            isRunningSuccess = 1;
-        } catch (IOException _) {
+        } catch (IOException e) {
+            throw new IOException();
         }
 
+        isRunningSuccess = 1;
         return isRunningSuccess;
     }
 
@@ -118,6 +119,8 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        fileRunner.sendData(fileRunner.isRunningSuccess);
+
+        //主进程读取数据的时候出错，所以暂时禁用
+//        fileRunner.sendData(fileRunner.isRunningSuccess);
     }
 }
