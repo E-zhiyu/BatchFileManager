@@ -5,7 +5,7 @@ import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
 
-from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition
+from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog
 from qfluentwidgets import FluentIcon as FIF
 
 from AppConfig.config import cfg
@@ -170,20 +170,22 @@ class HomeInterface(QWidget):
 
         selectedRanges = self.fileTableView.selectedRanges()
         if selectedRanges:
-            logging.info('开始删除文件……')
+            w = Dialog('删除文件', '确认从列表中删除选中的文件吗？（此操作不会删除硬盘上的文件）', self.parentWindow)
+            if w.exec():
+                logging.info('开始删除文件……')
 
-            # 收集所有要删除的行索引（从大到小排序）
-            rowsToDelete = set()
-            for range_obj in selectedRanges:
-                rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+                # 收集所有要删除的行索引（从大到小排序）
+                rowsToDelete = set()
+                for range_obj in selectedRanges:
+                    rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
 
-            # 从大到小删除（避免索引变化问题）
-            i = 0
-            for row in sorted(rowsToDelete, reverse=True):
-                self.fileTableView.removeRow(row)
-                i += 1
+                # 从大到小删除（避免索引变化问题）
+                i = 0
+                for row in sorted(rowsToDelete, reverse=True):
+                    self.fileTableView.removeRow(row)
+                    i += 1
 
-            logging.info(f'已删除{i}个文件')
+                logging.info(f'已删除{i}个文件')
         else:
             InfoBar.warning(
                 '提示',
@@ -214,8 +216,14 @@ class HomeInterface(QWidget):
                 dirToOpen.append(directory)
 
             dirToOpen = set(dirToOpen)
-            for dir in dirToOpen:
-                os.system(f'explorer "{dir}"')
+            if len(dirToOpen) > 3:
+                w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致卡顿，确认继续吗？', self.parentWindow)
+                if w.exec():
+                    for dir in dirToOpen:
+                        os.system(f'explorer "{dir}"')
+            else:
+                for dir in dirToOpen:
+                    os.system(f'explorer "{dir}"')
         else:
             InfoBar.warning(
                 '提示',

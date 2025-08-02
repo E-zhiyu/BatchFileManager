@@ -79,7 +79,7 @@ class CMDInterface(QWidget):
                     '没有正在运行的文件',
                     duration=1500,
                     position=InfoBarPosition.TOP,
-                    parent=self.parent.parentWindow
+                    parent=self.parentWindow
                 )
 
     def clearOutput(self):
