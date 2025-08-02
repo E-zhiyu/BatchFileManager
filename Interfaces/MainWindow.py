@@ -74,6 +74,6 @@ class MainWindow(FluentWindow):
         cfg.set(cfg.tableColumnWidth, fileTableWidth)
 
         # 切断与子进程的连接
-        self.cmdInterface.stopCommunication()
+        self.cmdInterface.stopCommunicationAndKill()
 
         super().closeEvent(event)

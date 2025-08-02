@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
 from Connector.SocketClient import SocketClient
-from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton
+from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton, Dialog, InfoBar, InfoBarPosition
 from qfluentwidgets import FluentIcon as FIF
 
 
@@ -43,8 +43,13 @@ class CMDInterface(QWidget):
         self.runCommandLineEdit = LineEdit()
         self.runCommandLineEdit.setPlaceholderText('输入待运行的命令')
         runCommandLayout.addWidget(self.runCommandLineEdit, 1, )
+
         self.runCommandButton = PushButton(text='发送命令', icon=FIF.SEND)
         runCommandLayout.addWidget(self.runCommandButton, 0, )
+
+        killButton = PushButton(text='结束进程', icon=FIF.CLOSE.icon(color='red'))
+        runCommandLayout.addWidget(killButton, 0, Qt.AlignmentFlag.AlignRight)
+        killButton.clicked.connect(lambda: self.stopCommunicationAndKill(True))
 
         CMDOutputLabel = BodyLabel('控制台输出')
         self.mainLayout.addWidget(CMDOutputLabel, 0, Qt.AlignmentFlag.AlignLeft)
@@ -56,9 +61,26 @@ class CMDInterface(QWidget):
         self.clearOutput()
         self.sktClient.setup_socket()
 
-    def stopCommunication(self):
-        """结束与Java子进程的通信"""
-        self.sktClient.on_close()
+    def stopCommunicationAndKill(self, withMessageBox: bool = False):
+        """
+        结束与Java子进程的通信并结束进程
+        :param withMessageBox:是否弹出确认框
+        """
+        if not withMessageBox:
+            self.sktClient.send_command('#kill#')
+        else:
+            if self.sktClient.running:
+                w = Dialog('结束进程', '确认要结束进程吗？这可能导致不可逆的后果', self.parentWindow)
+                if w.exec():
+                    self.sktClient.send_command('#kill#')
+            else:
+                InfoBar.error(
+                    "错误",
+                    '没有正在运行的文件',
+                    duration=1500,
+                    position=InfoBarPosition.TOP,
+                    parent=self.parent.parentWindow
+                )
 
     def clearOutput(self):
         """清空命令输出的内容"""

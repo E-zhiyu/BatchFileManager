@@ -6,6 +6,7 @@ import org.json.JSONArray;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.TimeUnit;
 
 public class fileRunner implements GrandProcessConnector<String, Integer> {
     String fileToRun;
@@ -40,6 +41,32 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
 //
 //        JSONArray jsonArray = new JSONArray(l);
 //        System.out.println(jsonArray);
+    }
+
+    /**
+     * 强制结束文件运行进程
+     *
+     * @param process 需要结束的进程
+     */
+    void killProcess(Process process) {
+        process.destroy();
+        if (process.isAlive()) {
+            process.destroyForcibly();
+        }
+
+        if (process.isAlive()) {
+            // 获取进程PID
+            long pid = process.pid();
+
+            // Windows系统
+            if (System.getProperty("os.name").toLowerCase().contains("win")) {
+                try {
+                    Runtime.getRuntime().exec("taskkill /F /PID " + pid);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
     }
 
     /**
@@ -87,6 +114,12 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
                         new OutputStreamWriter(process.getOutputStream()))) {
                     String command;
                     while ((command = in.readLine()) != null) {
+                        //判断是否为终止进程命令
+                        if (command.startsWith("#") && command.endsWith("#")) {
+                            killProcess(process);
+                            break;
+                        }
+
                         writer.write(command);
                         writer.newLine();
                         writer.flush();
@@ -103,6 +136,7 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
         } catch (IOException e) {
             throw new IOException();
         } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             out.println("[ERROR] 执行被中断");
             out.flush();
         }

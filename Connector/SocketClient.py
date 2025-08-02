@@ -58,21 +58,28 @@ class SocketClient:
         )
         self.send_thread.start()
 
-    def send_command(self):
+    def send_command(self, custom_cmd: str = ''):
         """将命令放入队列(由发送线程处理)"""
-        cmd = self.userCommandControl.text()
-        if cmd and self.running:
+        if not custom_cmd:
+            cmd = self.userCommandControl.text()
             logging.info(f'用户输入命令：{cmd}')
+        else:
+            cmd = custom_cmd
+            logging.info(f'用户尝试结束进程')
+
+        if cmd and self.running:
             self.outputControl.append(f">{cmd}")
             self.command_queue.put(cmd)
             self.userCommandControl.setText('')  # 清空输入框的命令
-            InfoBar.success(
-                "成功",
-                '命令已发送',
-                duration=1500,
-                position=InfoBarPosition.TOP,
-                parent=self.parent.parentWindow
-            )
+
+            if not custom_cmd:  # 只有获取的是命令输入框的内容才会显示消息条
+                InfoBar.success(
+                    "成功",
+                    '命令已发送',
+                    duration=1500,
+                    position=InfoBarPosition.TOP,
+                    parent=self.parent.parentWindow
+                )
         elif not self.running:
             InfoBar.error(
                 "错误",
@@ -109,13 +116,20 @@ class SocketClient:
         while self.running:
             try:
                 data = self.sock.recv(1024).decode('utf-8')
-                self.outputControl.append(data.replace('\n', ''))
-                if not data or data.startswith('#'):
+
+                # 更新GUI
+                self.outputControl.append(data)
+
+                if not data:
                     self.on_close()
                     break
-                # 更新GUI
+                elif data.startswith('#'):
+                    logging.info(data.replace('\n', '', -1))
+                    self.on_close()
+                    break
             except ConnectionResetError:
                 self.outputControl.append('【BFM】Java后端服务器已关闭')
+                self.running = False
                 break
             except socket.timeout:
                 self.outputControl.append('【BFM】接收超时')
@@ -124,6 +138,7 @@ class SocketClient:
                     continue
             except Exception as e:
                 self.outputControl.append(f'【BFM】接收错误：{str(e)}')
+                self.running = False
                 break
 
     def on_close(self):
