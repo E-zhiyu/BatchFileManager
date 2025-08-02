@@ -140,7 +140,6 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
             out.println("[ERROR] 执行被中断");
             out.flush();
         }
-
     }
 
     public static void main(String[] args) {
