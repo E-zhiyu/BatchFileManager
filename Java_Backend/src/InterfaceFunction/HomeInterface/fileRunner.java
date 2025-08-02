@@ -6,12 +6,9 @@ import org.json.JSONArray;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.List;
 
 public class fileRunner implements GrandProcessConnector<String, Integer> {
     String fileToRun;
-    Integer isRunningSuccess;
 
     /**
      * @return 从主进程获取到的文件路径列表
@@ -36,26 +33,22 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
         return fileToRun;
     }
 
-    /**
-     * @param flag 成功运行与运行失败的文件数
-     */
     @Override
-    public void sendData(Integer flag) {
-        List<Integer> l = new ArrayList<>();
-        l.add(flag);
-
-        JSONArray jsonArray = new JSONArray(l);
-        System.out.println(jsonArray);
+    public void sendData(Integer data) {
+//        List<Integer> l = new ArrayList<>();
+//        l.add(data);
+//
+//        JSONArray jsonArray = new JSONArray(l);
+//        System.out.println(jsonArray);
     }
 
     /**
      * 批量运行文件
      *
      * @param fileToRun 待运行文件的路径列表
-     * @return 成功运行与运行失败的文件数
      */
-    Integer runFiles(String fileToRun) throws IOException {
-        int isRunningSuccess = 0;
+    void runFiles(String fileToRun) throws IOException {
+        int exitCode = -1;
 
         //创建与主进程（客户端）的连接
         ServerSocket serverSocket = new ServerSocket(8080);
@@ -77,11 +70,11 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
 
             // 读取进程输出并发送到客户端
             new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(process.getInputStream()))) {
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         out.println(line);
+                        out.flush();
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -93,7 +86,7 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
                 try (BufferedWriter writer = new BufferedWriter(
                         new OutputStreamWriter(process.getOutputStream()))) {
                     String command;
-                    while ((command = in.readLine()) != null && !command.isEmpty()) {
+                    while ((command = in.readLine()) != null) {
                         writer.write(command);
                         writer.newLine();
                         writer.flush();
@@ -103,24 +96,26 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
                 }
             }).start();
 
+            exitCode = process.waitFor();
+            out.println("#进程已退出，代码：" + exitCode);
+            out.flush();
+
         } catch (IOException e) {
             throw new IOException();
+        } catch (InterruptedException e) {
+            out.println("[ERROR] 执行被中断");
+            out.flush();
         }
 
-        isRunningSuccess = 1;
-        return isRunningSuccess;
     }
 
     public static void main(String[] args) {
         fileRunner fileRunner = new fileRunner();
         fileRunner.fileToRun = fileRunner.receiveData();
         try {
-            fileRunner.isRunningSuccess = fileRunner.runFiles(fileRunner.fileToRun);
+            fileRunner.runFiles(fileRunner.fileToRun);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        //主进程读取数据的时候出错，所以暂时禁用
-//        fileRunner.sendData(fileRunner.isRunningSuccess);
     }
 }

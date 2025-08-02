@@ -30,13 +30,12 @@ class CMDInterface(QWidget):
         self.initControls()
 
         # 实例化连接子进程控制台的连接器
-        self.sktClient = SocketClient(self.runCommandLineEdit, self.CMDOutputTextBrowser)
+        self.sktClient = SocketClient(self, self.runCommandLineEdit, self.CMDOutputTextBrowser)
         self.runCommandButton.clicked.connect(self.sktClient.send_command)
-        # self.runCommandLineEdit.enterEvent.connect(self.sktClient.send_command)
+        self.runCommandLineEdit.returnPressed.connect(self.sktClient.send_command)
 
     def initControls(self):
         """初始化控件"""
-
         runCommandLabel = BodyLabel("命令输入框")
         self.mainLayout.addWidget(runCommandLabel, 0, Qt.AlignmentFlag.AlignLeft)
         runCommandLayout = QHBoxLayout()

@@ -102,20 +102,30 @@ class HomeInterface(QWidget):
                     parent=self.parentWindow
                 )
             else:
-                item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
-                filePath = item.text()
-                fileRun_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
-                fileRun_cnt.sendData()
-                self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
+                if not self.parentWindow.cmdInterface.sktClient.running:
+                    item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
+                    filePath = item.text()
+                    fileRun_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
+                    fileRun_cnt.sendData()
+                    self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
 
-                InfoBar.success(
-                    '开始运行',
-                    '请前往控制台界面查看运行详情',
-                    position=InfoBarPosition.TOP,
-                    duration=1500,
-                    parent=self.parentWindow
-                )
-                logging.info('文件成功运行')
+                    InfoBar.success(
+                        '开始运行',
+                        '请前往控制台界面查看运行详情',
+                        position=InfoBarPosition.TOP,
+                        duration=1500,
+                        parent=self.parentWindow
+                    )
+                    logging.info('文件成功运行')
+                else:
+                    InfoBar.error(
+                        '运行失败',
+                        '已有正在运行的文件',
+                        position=InfoBarPosition.TOP,
+                        duration=1500,
+                        parent=self.parentWindow
+                    )
+                    logging.info('运行失败，已有正在运行的文件')
         else:
             InfoBar.warning(
                 '提示',
@@ -196,12 +206,16 @@ class HomeInterface(QWidget):
             for range_obj in selectedRanges:
                 selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
 
+            dirToOpen = []
             for i in selectedRowsIndex:
                 item = self.fileTableView.item(i, 2)
                 filePath = item.text()
                 directory = os.path.dirname(filePath).replace('/', '\\')
+                dirToOpen.append(directory)
 
-                os.system(f'explorer "{directory}"')
+            dirToOpen = set(dirToOpen)
+            for dir in dirToOpen:
+                os.system(f'explorer "{dir}"')
         else:
             InfoBar.warning(
                 '提示',
