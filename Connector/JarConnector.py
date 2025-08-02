@@ -6,11 +6,11 @@ import subprocess
 class JarConnector:
     """
     连接.jar文件的类
-    参数 target：需要运行的.jar文件
-    参数 sent_data：需要发送的参数
+    :param target：需要运行的.jar文件
+    :param sent_data：需要发送的参数（要能被JSON格式化）
     """
 
-    def __init__(self, target: str, sent_data):
+    def __init__(self, target: str, sent_data: (list, dict, set)):
         self.target = target  # 目标.jar文件路径
         self.sent_data = sent_data  # 需要发送的数据
 
@@ -19,13 +19,18 @@ class JarConnector:
             ["java", '-jar', self.target],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=1,  # 行缓冲
+            encoding="utf-8",
             text=True
         )
 
-    def sendData(self):
+        self.__sendData()
+
+    def __sendData(self):
         """通过标准输入向Java子进程发送数据"""
         # 将列表转换为JSON字符串并发送
-        json_data = json.dumps(self.sent_data)
+        json_data = json.dumps(self.sent_data, ensure_ascii=False)
         self.java_process.stdin.write(json_data + "\n")  # 添加换行符作为结束标记
         self.java_process.stdin.flush()  # 确保数据被发送
 

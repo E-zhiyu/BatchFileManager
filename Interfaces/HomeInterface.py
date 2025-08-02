@@ -1,6 +1,7 @@
 """主页模块"""
 import json
 import os
+import time
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
@@ -105,8 +106,7 @@ class HomeInterface(QWidget):
                 if not self.parentWindow.cmdInterface.sktClient.running:
                     item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
                     filePath = item.text()
-                    fileRun_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
-                    fileRun_cnt.sendData()
+                    JarConnector('./backend/fileRunner.jar', [filePath])
                     self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
 
                     InfoBar.success(
@@ -149,7 +149,7 @@ class HomeInterface(QWidget):
             logging.info('开始添加文件……')
 
             fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
-            file_infos = fileAdd_cnt.received_data  # [[文件名,修改日期,后缀名,文件大小],...]
+            file_infos = fileAdd_cnt.receive_data  # [[文件名,修改日期,后缀名,文件大小],...]
             if file_infos is not None:
                 currentRowCount = self.fileTableView.rowCount()
 
