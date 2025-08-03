@@ -5,7 +5,7 @@ import os
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
 
-from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog
+from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog, ToolTipFilter, ToolTipPosition
 from qfluentwidgets import FluentIcon as FIF
 
 from AppConfig.config import cfg
@@ -45,18 +45,26 @@ class HomeInterface(QWidget):
         self.mainLayout.addLayout(self.btnLayout)
 
         self.runButton = PushButton(FIF.PLAY.icon(color='green'), '运行文件')
+        self.runButton.setToolTip('运行单个选中的文件')
+        self.runButton.installEventFilter(ToolTipFilter(self.runButton,position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.runButton)
         self.runButton.clicked.connect(self.runFileAction)
 
         self.addButton = PushButton(FIF.ADD, "添加文件")
+        self.addButton.setToolTip('将文件添加至表格中')
+        self.addButton.installEventFilter(ToolTipFilter(self.addButton,position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.addButton)
         self.addButton.clicked.connect(self.addFileAction)
 
         self.removeButton = PushButton(FIF.DELETE.icon(color='red'), '删除文件')
+        self.removeButton.setToolTip('将选中的文件移出表格')
+        self.removeButton.installEventFilter(ToolTipFilter(self.removeButton,position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.removeButton)
         self.removeButton.clicked.connect(self.removeFileAction)
 
         self.openFolderButton = PushButton(FIF.FOLDER, '打开所在文件夹')
+        self.openFolderButton.setToolTip('打开选中文件的文件夹')
+        self.openFolderButton.installEventFilter(ToolTipFilter(self.openFolderButton,position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.openFolderButton)
         self.openFolderButton.clicked.connect(self.openFolderAction)
 
