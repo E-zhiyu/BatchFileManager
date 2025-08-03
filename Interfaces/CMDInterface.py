@@ -3,7 +3,8 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
 from Connector.SocketClient import SocketClient
-from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox
+from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox, \
+    ToolTipFilter, ToolTipPosition
 from qfluentwidgets import FluentIcon as FIF
 
 
@@ -31,7 +32,7 @@ class CMDInterface(QWidget):
 
         # 实例化连接子进程控制台的连接器
         self.sktClient = SocketClient(self, self.runCommandLineEdit, self.outputTextBrowser)
-        self.runCommandButton.clicked.connect(self.sktClient.send_command)
+        self.sendCommandButton.clicked.connect(self.sktClient.send_command)
         self.runCommandLineEdit.returnPressed.connect(self.sktClient.send_command)
 
     def initControls(self):
@@ -47,10 +48,14 @@ class CMDInterface(QWidget):
         self.runCommandLineEdit.setPlaceholderText('输入待运行的命令')
         runCommandLayout.addWidget(self.runCommandLineEdit, 1, )
 
-        self.runCommandButton = PushButton(text='发送命令', icon=FIF.SEND)
-        runCommandLayout.addWidget(self.runCommandButton, 0, )
+        self.sendCommandButton = PushButton(text='发送命令', icon=FIF.SEND)
+        self.sendCommandButton.setToolTip('将命令发送至后台(Enter)')
+        self.sendCommandButton.installEventFilter(ToolTipFilter(self.sendCommandButton, position=ToolTipPosition.TOP))
+        runCommandLayout.addWidget(self.sendCommandButton, 0, )
 
         killButton = PushButton(text='结束进程', icon=FIF.CLOSE.icon(color='red'))
+        killButton.setToolTip('强制结束进程')
+        killButton.installEventFilter(ToolTipFilter(killButton, position=ToolTipPosition.TOP))
         runCommandLayout.addWidget(killButton, 0, Qt.AlignmentFlag.AlignRight)
         killButton.clicked.connect(lambda: self.stopCommunicationAndKill(True))
 
@@ -61,6 +66,9 @@ class CMDInterface(QWidget):
         outputLayout.addWidget(CMDOutputLabel, 0, Qt.AlignmentFlag.AlignLeft)
 
         self.autoScrollCheckBox = CheckBox('自动滚动')  # 自动滚动复选框
+        self.autoScrollCheckBox.setToolTip('输出内容更新时自动滚动至页面底部')
+        self.autoScrollCheckBox.installEventFilter(
+            ToolTipFilter(self.autoScrollCheckBox, position=ToolTipPosition.BOTTOM_RIGHT))
         self.autoScrollCheckBox.setChecked(True)
         self.autoScrollCheckBox.checkStateChanged.connect(self.setAutoScroll)
         outputLayout.addWidget(self.autoScrollCheckBox, 0, Qt.AlignmentFlag.AlignRight)
