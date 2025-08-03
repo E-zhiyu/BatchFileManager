@@ -37,14 +37,14 @@ class SocketClient:
         try:
             self.sock.connect((self.host, self.port))
             self.sock.settimeout(0)  # 成功连接则取消超时
-            self.outputTextBrowser.append("【BFM】已连接到Java进程服务器")
+            self.outputTextBrowser.insertPlainText("【BFM】已连接到Java进程服务器\n")
             logging.info("【BFM】已连接到Java进程服务器")
             self.running = True
         except ConnectionRefusedError:
-            self.outputTextBrowser.append("【BFM】错误: 无法连接到服务器")
+            self.outputTextBrowser.insertPlainText("【BFM】错误: 无法连接到服务器\n")
             logging.error('【BFM】错误: 无法连接到服务器')
         except socket.timeout:
-            self.outputTextBrowser.append('【BFM】错误：连接子进程超时')
+            self.outputTextBrowser.insertPlainText('【BFM】错误：连接子进程超时\n')
             logging.warning('【BFM】错误：连接子进程超时')
 
         # 启动接收线程
@@ -71,7 +71,7 @@ class SocketClient:
             logging.info(f'用户尝试结束进程')
 
         if cmd and self.running:
-            self.outputTextBrowser.append(f">{cmd}")
+            self.outputTextBrowser.insertPlainText(f">{cmd}\n")
             self.command_queue.put(cmd)
             self.userCommandControl.setText('')  # 清空输入框的命令
 
@@ -109,9 +109,9 @@ class SocketClient:
             except queue.Empty:
                 continue
             except socket.timeout:
-                self.outputTextBrowser.append('【BFM】发送超时')
+                self.outputTextBrowser.insertPlainText('【BFM】发送超时\n')
             except Exception as e:
-                self.outputTextBrowser.append(f"【BFM】发送错误: {str(e)}")
+                self.outputTextBrowser.insertPlainText(f"【BFM】发送错误: {str(e)}\n")
                 break
 
     def receive_messages(self):
@@ -121,7 +121,7 @@ class SocketClient:
                 data = self.sock.recv(1024).decode('utf-8')
 
                 # 更新GUI
-                self.outputTextBrowser.append(data)
+                self.outputTextBrowser.insertPlainText(data)
 
                 # 滚动到底部
                 if self.autoScroll:
@@ -139,16 +139,16 @@ class SocketClient:
                     self.on_close()
                     break
             except ConnectionResetError:
-                self.outputTextBrowser.append('【BFM】Java后端服务器已关闭')
+                self.outputTextBrowser.insertPlainText('【BFM】Java后端服务器已关闭\n')
                 self.running = False
                 break
             except socket.timeout:
-                self.outputTextBrowser.append('【BFM】接收超时')
+                self.outputTextBrowser.insertPlainText('【BFM】接收超时\n')
             except socket.error as e:
                 if e.errno == 10035:  # 处理非阻塞错误
                     continue
             except Exception as e:
-                self.outputTextBrowser.append(f'【BFM】接收错误：{str(e)}')
+                self.outputTextBrowser.insertPlainText(f'【BFM】接收错误：{str(e)}\n')
                 self.running = False
                 break
 
