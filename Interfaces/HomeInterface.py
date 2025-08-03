@@ -69,7 +69,7 @@ class HomeInterface(QWidget):
         self.fileTableView.setColumnCount(6)  # 设置列数
         self.fileTableView.verticalHeader().hide()  # 隐藏行序号
         self.fileTableView.setHorizontalHeaderLabels(['文件名', '备注', '文件路径', '修改日期', '文件类型', '大小'])
-        self.fileTableView.setSortingEnabled(True)  # 启用表头排序
+        # self.fileTableView.setSortingEnabled(True)  # 启用表头排序
 
         # 恢复软件关闭前的列宽
         columnWidthList = cfg.get(cfg.tableColumnWidth)
