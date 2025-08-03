@@ -1,7 +1,6 @@
 """主页模块"""
 import json
 import os
-import time
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
@@ -71,8 +70,6 @@ class HomeInterface(QWidget):
         self.fileTableView.verticalHeader().hide()  # 隐藏行序号
         self.fileTableView.setHorizontalHeaderLabels(['文件名', '备注', '文件路径', '修改日期', '文件类型', '大小'])
         self.fileTableView.setSortingEnabled(True)  # 启用表头排序
-        self.fileTableView.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # 备注列拉伸以适应窗口
-        self.fileTableView.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # 文件路径拉伸
 
         # 恢复软件关闭前的列宽
         columnWidthList = cfg.get(cfg.tableColumnWidth)
@@ -80,6 +77,9 @@ class HomeInterface(QWidget):
             for i, width in enumerate(columnWidthList):
                 if width:
                     self.fileTableView.setColumnWidth(i, width)
+        else:
+            self.fileTableView.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # 备注列拉伸以适应窗口
+            self.fileTableView.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # 文件路径拉伸
 
     def runFileAction(self):
         """运行文件行为"""
@@ -202,7 +202,16 @@ class HomeInterface(QWidget):
                     self.fileTableView.removeRow(row)
                     i += 1
 
+                InfoBar.success(
+                    '成功',
+                    '已删除选中的文件',
+                    duration=1500,
+                    position=InfoBarPosition.TOP,
+                    parent=self.parentWindow
+                )
+
                 logging.info(f'已删除{i}个文件')
+                self.saveContents()
         else:
             InfoBar.warning(
                 '提示',
@@ -211,8 +220,6 @@ class HomeInterface(QWidget):
                 duration=1500,
                 parent=self.parentWindow
             )
-
-            self.saveContents()
 
     def openFolderAction(self):
         """打开文件夹行为"""

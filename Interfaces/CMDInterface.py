@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
 from Connector.SocketClient import SocketClient
-from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton, Dialog, InfoBar, InfoBarPosition
+from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox
 from qfluentwidgets import FluentIcon as FIF
 
 
@@ -30,17 +30,20 @@ class CMDInterface(QWidget):
         self.initControls()
 
         # 实例化连接子进程控制台的连接器
-        self.sktClient = SocketClient(self, self.runCommandLineEdit, self.CMDOutputTextBrowser)
+        self.sktClient = SocketClient(self, self.runCommandLineEdit, self.outputTextBrowser)
         self.runCommandButton.clicked.connect(self.sktClient.send_command)
         self.runCommandLineEdit.returnPressed.connect(self.sktClient.send_command)
 
     def initControls(self):
         """初始化控件"""
+
+        """命令输入和控制台操作"""
         runCommandLabel = BodyLabel("命令输入框")
         self.mainLayout.addWidget(runCommandLabel, 0, Qt.AlignmentFlag.AlignLeft)
         runCommandLayout = QHBoxLayout()
         self.mainLayout.addLayout(runCommandLayout)
-        self.runCommandLineEdit = LineEdit()
+
+        self.runCommandLineEdit = LineEdit()  # 命令输入框
         self.runCommandLineEdit.setPlaceholderText('输入待运行的命令')
         runCommandLayout.addWidget(self.runCommandLineEdit, 1, )
 
@@ -51,10 +54,23 @@ class CMDInterface(QWidget):
         runCommandLayout.addWidget(killButton, 0, Qt.AlignmentFlag.AlignRight)
         killButton.clicked.connect(lambda: self.stopCommunicationAndKill(True))
 
+        """控制台内容输出"""
+        outputLayout = QHBoxLayout()
+        self.mainLayout.addLayout(outputLayout)
         CMDOutputLabel = BodyLabel('控制台输出')
-        self.mainLayout.addWidget(CMDOutputLabel, 0, Qt.AlignmentFlag.AlignLeft)
-        self.CMDOutputTextBrowser = TextBrowser()
-        self.mainLayout.addWidget(self.CMDOutputTextBrowser, 1, )
+        outputLayout.addWidget(CMDOutputLabel, 0, Qt.AlignmentFlag.AlignLeft)
+
+        self.autoScrollCheckBox = CheckBox('自动滚动')  # 自动滚动复选框
+        self.autoScrollCheckBox.setChecked(True)
+        self.autoScrollCheckBox.checkStateChanged.connect(self.setAutoScroll)
+        outputLayout.addWidget(self.autoScrollCheckBox, 0, Qt.AlignmentFlag.AlignRight)
+
+        self.outputTextBrowser = TextBrowser()  # 显示控制台内容的控件
+        self.outputTextBrowser.document().setMaximumBlockCount(1000)  # 限制最大行数
+        self.mainLayout.addWidget(self.outputTextBrowser, 1)
+
+    def setAutoScroll(self):
+        self.sktClient.autoScroll = self.autoScrollCheckBox.isChecked()
 
     def startCommunication(self):
         """启动与Java子进程的通信"""
@@ -84,4 +100,4 @@ class CMDInterface(QWidget):
 
     def clearOutput(self):
         """清空命令输出的内容"""
-        self.CMDOutputTextBrowser.clear()
+        self.outputTextBrowser.clear()

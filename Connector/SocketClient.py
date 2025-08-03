@@ -3,6 +3,8 @@ import socket
 import threading
 import queue
 
+from PyQt6.QtCore import QTimer
+
 from qfluentwidgets import TextBrowser, LineEdit, InfoBar, InfoBarPosition
 
 from Logs.log_recorder import logging
@@ -21,11 +23,12 @@ class SocketClient:
         """
         self.parent = parent
         self.userCommandControl = userCommandControl
-        self.outputControl = outputControl
+        self.outputTextBrowser = outputControl
         self.host = host
         self.port = port
         self.command_queue = queue.Queue()
         self.running = False
+        self.autoScroll = True
 
     def setup_socket(self):
         """创建套接字并启动通信线程"""
@@ -34,14 +37,14 @@ class SocketClient:
         try:
             self.sock.connect((self.host, self.port))
             self.sock.settimeout(0)  # 成功连接则取消超时
-            self.outputControl.append("【BFM】已连接到Java进程服务器")
+            self.outputTextBrowser.append("【BFM】已连接到Java进程服务器")
             logging.info("【BFM】已连接到Java进程服务器")
             self.running = True
         except ConnectionRefusedError:
-            self.outputControl.append("【BFM】错误: 无法连接到服务器")
+            self.outputTextBrowser.append("【BFM】错误: 无法连接到服务器")
             logging.error('【BFM】错误: 无法连接到服务器')
         except socket.timeout:
-            self.outputControl.append('【BFM】错误：连接子进程超时')
+            self.outputTextBrowser.append('【BFM】错误：连接子进程超时')
             logging.warning('【BFM】错误：连接子进程超时')
 
         # 启动接收线程
@@ -68,7 +71,7 @@ class SocketClient:
             logging.info(f'用户尝试结束进程')
 
         if cmd and self.running:
-            self.outputControl.append(f">{cmd}")
+            self.outputTextBrowser.append(f">{cmd}")
             self.command_queue.put(cmd)
             self.userCommandControl.setText('')  # 清空输入框的命令
 
@@ -106,9 +109,9 @@ class SocketClient:
             except queue.Empty:
                 continue
             except socket.timeout:
-                self.outputControl.append('【BFM】发送超时')
+                self.outputTextBrowser.append('【BFM】发送超时')
             except Exception as e:
-                self.outputControl.append(f"【BFM】发送错误: {str(e)}")
+                self.outputTextBrowser.append(f"【BFM】发送错误: {str(e)}")
                 break
 
     def receive_messages(self):
@@ -118,26 +121,34 @@ class SocketClient:
                 data = self.sock.recv(1024).decode('utf-8')
 
                 # 更新GUI
-                self.outputControl.append(data)
+                self.outputTextBrowser.append(data)
 
+                # 滚动到底部
+                if self.autoScroll:
+                    cursor = self.outputTextBrowser.textCursor()
+                    cursor.movePosition(cursor.MoveOperation.End)  # PyQt6 的枚举值
+                    self.outputTextBrowser.setTextCursor(cursor)
+                    self.outputTextBrowser.ensureCursorVisible()
+
+                # 自动检测并关闭进程
                 if not data:
                     self.on_close()
                     break
                 elif data.startswith('#'):
-                    logging.info(data.replace('\n', '', -1))
+                    logging.info(data)
                     self.on_close()
                     break
             except ConnectionResetError:
-                self.outputControl.append('【BFM】Java后端服务器已关闭')
+                self.outputTextBrowser.append('【BFM】Java后端服务器已关闭')
                 self.running = False
                 break
             except socket.timeout:
-                self.outputControl.append('【BFM】接收超时')
+                self.outputTextBrowser.append('【BFM】接收超时')
             except socket.error as e:
                 if e.errno == 10035:  # 处理非阻塞错误
                     continue
             except Exception as e:
-                self.outputControl.append(f'【BFM】接收错误：{str(e)}')
+                self.outputTextBrowser.append(f'【BFM】接收错误：{str(e)}')
                 self.running = False
                 break
 

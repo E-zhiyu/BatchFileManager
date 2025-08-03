@@ -69,9 +69,12 @@ class MainWindow(FluentWindow):
     def closeEvent(self, event):
         """重写关闭事件"""
 
-        # 关闭时保存表格内容
+        # 关闭时保存表格宽度
         fileTableWidth = [self.homeInterface.fileTableView.columnWidth(i) for i in range(5)]
         cfg.set(cfg.tableColumnWidth, fileTableWidth)
+
+        #保存表格内容
+        self.homeInterface.saveContents()
 
         # 切断与子进程的连接
         self.cmdInterface.stopCommunicationAndKill()
