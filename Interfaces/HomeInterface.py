@@ -149,7 +149,7 @@ class HomeInterface(QWidget):
             logging.info('开始添加文件……')
 
             fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
-            file_infos = fileAdd_cnt.receive_data  # [[文件名,修改日期,后缀名,文件大小],...]
+            file_infos = fileAdd_cnt.receiveData()  # [[文件名,修改日期,后缀名,文件大小],...]
             if file_infos is not None:
                 currentRowCount = self.fileTableView.rowCount()
 
@@ -161,7 +161,24 @@ class HomeInterface(QWidget):
                     self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
                     self.fileTableView.setItem(currentRowCount + index, 5, QTableWidgetItem(oneInfo[3]))
 
+                InfoBar.success(
+                    '成功',
+                    f'已添加{len(file_infos)}个文件',
+                    duration=1500,
+                    position=InfoBarPosition.TOP,
+                    parent=self.parentWindow
+                )
                 logging.info(f'成功添加{len(files)}个文件')
+
+            else:
+                InfoBar.error(
+                    '失败',
+                    '无法添加文件',
+                    duration=1500,
+                    position=InfoBarPosition.TOP,
+                    parent=self.parentWindow
+                )
+                logging.error('无法添加文件')
 
             self.saveContents()
 

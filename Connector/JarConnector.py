@@ -20,8 +20,6 @@ class JarConnector:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            bufsize=1,  # 行缓冲
-            encoding="utf-8",
             text=True
         )
 
@@ -30,9 +28,10 @@ class JarConnector:
     def __sendData(self):
         """通过标准输入向Java子进程发送数据"""
         # 将列表转换为JSON字符串并发送
-        json_data = json.dumps(self.sent_data, ensure_ascii=False)
-        self.java_process.stdin.write(json_data + "\n")  # 添加换行符作为结束标记
+        json_data = json.dumps(self.sent_data)
+        self.java_process.stdin.write(json_data + '\n')  # 添加换行符作为结束标记
         self.java_process.stdin.flush()  # 确保数据被发送
+        self.java_process.stdin.close()
 
     def receiveData(self):
         """从Java子进程读取标准输出中的数据"""
