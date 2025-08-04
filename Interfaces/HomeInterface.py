@@ -115,6 +115,12 @@ class HomeInterface(QWidget):
                     item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
                     filePath = item.text()
                     if os.path.isfile(filePath):
+                        # 在备注中删除“（已失效）”字样
+                        remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
+                        if remark.startswith('（已失效）'):
+                            remark = remark.lstrip('（已失效）')
+                            self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+
                         JarConnector('./backend/fileRunner.jar', [filePath])
                         self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
 
@@ -127,11 +133,13 @@ class HomeInterface(QWidget):
                         )
                         logging.info('文件成功运行')
                     else:
-                        #在备注中标记“（已失效）”
+                        # 在备注中标记“（已失效）”
                         remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
                         if not remark.startswith('（已失效）'):
                             remark = f'（已失效）{remark}'
                             self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+
+                        self.fileTableView.clearSelection()  # 取消所有选择
 
                         InfoBar.error(
                             '失败',
@@ -228,8 +236,8 @@ class HomeInterface(QWidget):
                     self.fileTableView.removeRow(row)
                     i += 1
 
-                # 减少行数
-                self.fileTableView.setRowCount(currentRowCount - i)
+                self.fileTableView.setRowCount(currentRowCount - i)  # 减少行数
+                self.fileTableView.clearSelection()  # 取消所有选择
 
                 InfoBar.success(
                     '成功',
