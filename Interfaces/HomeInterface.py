@@ -2,15 +2,38 @@
 import json
 import os
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
 
-from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog, ToolTipFilter, ToolTipPosition
+from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog, ToolTipFilter, ToolTipPosition, \
+    RoundMenu, Action, MessageBoxBase, SubtitleLabel, LineEdit
 from qfluentwidgets import FluentIcon as FIF
 
 from AppConfig.config import cfg
 from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
+from qfluentwidgets.components.widgets.info_bar import BottomRightInfoBarManager
+
+
+class RemarkModifyDialog(MessageBoxBase):
+    """修改备注的窗口类"""
+
+    def __init__(self, origin_remark, parent=None):
+        """
+        备注修改窗口
+        :param origin_remark:修改前的备注
+        :param parent:待遮罩的窗口（推荐设置为主窗口）
+        """
+        super().__init__(parent)
+        self.widget.setMinimumWidth(350)  # 设置最小窗口宽度
+
+        titleLabel = SubtitleLabel('修改备注')
+        self.viewLayout.addWidget(titleLabel)
+
+        self.remarkLineEdit = LineEdit()
+        self.remarkLineEdit.setPlaceholderText('请输入备注（可留空）')
+        self.remarkLineEdit.setText(origin_remark)
+        self.viewLayout.addWidget(self.remarkLineEdit)
 
 
 class HomeInterface(QWidget):
@@ -48,7 +71,7 @@ class HomeInterface(QWidget):
         self.runButton.setToolTip('运行单个选中的文件')
         self.runButton.installEventFilter(ToolTipFilter(self.runButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.runButton)
-        self.runButton.clicked.connect(self.runFileAction)
+        self.runButton.clicked.connect(lambda: self.runFileAction())
 
         self.addButton = PushButton(FIF.ADD, "添加文件")
         self.addButton.setToolTip('将文件添加至表格中')
@@ -60,15 +83,15 @@ class HomeInterface(QWidget):
         self.removeButton.setToolTip('将选中的文件移出表格')
         self.removeButton.installEventFilter(ToolTipFilter(self.removeButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.removeButton)
-        self.removeButton.clicked.connect(self.removeFileAction)
+        self.removeButton.clicked.connect(lambda: self.removeFileAction())
 
-        self.openFolderButton = PushButton(FIF.FOLDER, '打开所在文件夹')
+        self.openFolderButton = PushButton(FIF.FOLDER.icon(color='orange'), '打开所在文件夹')
         self.openFolderButton.setToolTip('打开选中文件的文件夹')
         self.openFolderButton.installEventFilter(ToolTipFilter(self.openFolderButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.openFolderButton)
-        self.openFolderButton.clicked.connect(self.openFolderAction)
+        self.openFolderButton.clicked.connect(lambda: self.openFolderAction())
 
-        # 文件列表视图
+        # 文件表格视图
         self.fileTableView = TableWidget(self)
         self.mainLayout.addWidget(self.fileTableView)
 
@@ -78,6 +101,9 @@ class HomeInterface(QWidget):
         self.fileTableView.verticalHeader().hide()  # 隐藏行序号
         self.fileTableView.setHorizontalHeaderLabels(['文件名', '备注', '文件路径', '修改日期', '文件类型', '大小'])
         # self.fileTableView.setSortingEnabled(True)  # 启用表头排序
+
+        self.fileTableView.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # 将表格的上下文菜单策略设置为 自定义模式
+        self.fileTableView.customContextMenuRequested.connect(self.showContextMenu)  # 绑定显示右键菜单的方法
 
         # 恢复软件关闭前的列宽
         columnWidthList = cfg.get(cfg.tableColumnWidth)
@@ -89,82 +115,160 @@ class HomeInterface(QWidget):
             self.fileTableView.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # 备注列拉伸以适应窗口
             self.fileTableView.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # 文件路径拉伸
 
-    def runFileAction(self):
-        """运行文件行为"""
+    def showContextMenu(self, pos: QPoint):
+        """
+        呼出右键上下文菜单
+        :param pos: 光标位置
+        """
 
-        selectedRanges = self.fileTableView.selectedRanges()
-        if selectedRanges:
-            logging.info('运行文件中……')
+        # 获取全局坐标
+        global_pos = self.fileTableView.viewport().mapToGlobal(pos)
 
-            # 收集选中的行索引（从大到小排序）
-            selectedRowsIndex = []
-            for range_obj in selectedRanges:
-                selectedRowsIndex.append(range(range_obj.bottomRow(), range_obj.topRow() + 1))
+        # 判断点击的行
+        row = self.fileTableView.rowAt(pos.y())
+        if row < 0:  # 若没有选中有效行则直接结束
+            return
 
-            # 判断是否多选
-            if len(selectedRowsIndex) > 1:
-                InfoBar.warning(
-                    "提示",
-                    "只能同时运行一个文件",
-                    duration=1500,
-                    position=InfoBarPosition.TOP,
-                    parent=self.parentWindow
-                )
-            else:
-                if not self.parentWindow.cmdInterface.sktClient.running:
-                    item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
-                    filePath = item.text()
-                    if os.path.isfile(filePath):
-                        # 在备注中删除“（已失效）”字样
-                        remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
-                        if remark.startswith('（已失效）'):
-                            remark = remark.lstrip('（已失效）')
-                            self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+        # 为菜单添加动作
+        menu = RoundMenu()
+        fileEdit_actions = [
+            Action(FIF.PLAY.icon(color='green'), '运行文件'),
+            Action(FIF.EDIT, '编辑备注')
+        ]
+        menu.addActions(fileEdit_actions)
+        menu.addSeparator()  # 添加一个分割线
+        fileOperation_actions = [
+            Action(FIF.DELETE.icon(color='red'), '删除文件'),
+            Action(FIF.FOLDER.icon(color='orange'), '打开文件夹')
+        ]
+        menu.addActions(fileOperation_actions)
 
-                        JarConnector('./backend/fileRunner.jar', [filePath])
-                        self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
+        # 绑定动作对应的事件
+        fileEdit_actions[0].triggered.connect(lambda: self.runFileAction(row))
+        fileEdit_actions[1].triggered.connect(lambda: self.editRemarkAction(row))
 
-                        InfoBar.success(
-                            '开始运行',
-                            '请前往控制台界面查看运行详情',
-                            position=InfoBarPosition.TOP,
-                            duration=1500,
-                            parent=self.parentWindow
-                        )
-                        logging.info('文件成功运行')
-                    else:
-                        # 在备注中标记“（已失效）”
-                        remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
-                        if not remark.startswith('（已失效）'):
-                            remark = f'（已失效）{remark}'
-                            self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+        fileOperation_actions[0].triggered.connect(lambda: self.removeFileAction(row))
+        fileOperation_actions[1].triggered.connect(lambda: self.openFolderAction(row))
 
-                        self.fileTableView.clearSelection()  # 取消所有选择
+        # 计算菜单尺寸
+        menu_rect = menu.actionGeometry(menu.actions()[0])  # 获取第一个动作的尺寸
+        menu_height = menu_rect.height() * len(menu.actions())
+        menu_width = menu_rect.width()
 
-                        InfoBar.error(
-                            '失败',
-                            '所选的文件不存在',
-                            position=InfoBarPosition.TOP,
-                            duration=1500,
-                            parent=self.parentWindow
-                        )
-                else:
-                    InfoBar.error(
-                        '运行失败',
-                        '已有正在运行的文件',
-                        position=InfoBarPosition.TOP,
+        # 获取窗口可用区域
+        window_rect = self.fileTableView.window().geometry()
+
+        # 检查是否会超出右边界
+        if global_pos.x() + menu_width > window_rect.right():
+            global_pos.setX(window_rect.right() - menu_width)
+
+        # 检查是否会超出下边界
+        if global_pos.y() + menu_height > window_rect.bottom():
+            global_pos.setY(global_pos.y() - menu_height)
+
+        # 显示菜单
+        menu.exec(global_pos)
+
+    def runFileAction(self, row: int = None):
+        """
+        运行文件行为
+        :param row:选中的单个行下标（默认为空）
+        """
+
+        # 获取文件路径
+        if row is None:
+            selectedRanges = self.fileTableView.selectedRanges()
+            if selectedRanges:
+                logging.info('运行文件中……')
+
+                # 收集选中的行索引（从大到小排序）
+                selectedRowsIndex = []
+                for range_obj in selectedRanges:
+                    selectedRowsIndex.append(range(range_obj.bottomRow(), range_obj.topRow() + 1))
+
+                # 判断是否多选
+                if len(selectedRowsIndex) > 1:
+                    InfoBar.warning(
+                        "提示",
+                        "只能同时运行一个文件",
                         duration=1500,
+                        position=InfoBarPosition.TOP,
                         parent=self.parentWindow
                     )
-                    logging.info('运行失败，已有正在运行的文件')
+                else:
+                    item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
+            else:
+                InfoBar.warning(
+                    '提示',
+                    '请先选择一个文件',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
         else:
-            InfoBar.warning(
-                '提示',
-                '请先选择一个文件',
+            item = self.fileTableView.item(row, 2)
+
+        if not self.parentWindow.cmdInterface.sktClient.running:
+            filePath = item.text()
+            if os.path.isfile(filePath):
+                # 在备注中删除“（已失效）”字样
+                remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
+                if remark.startswith('（已失效）'):
+                    remark = remark.lstrip('（已失效）')
+                    self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+
+                JarConnector('./backend/fileRunner.jar', [filePath])
+                self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
+
+                InfoBar.success(
+                    '开始运行',
+                    '请前往控制台界面查看运行详情',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+                logging.info('文件成功运行')
+            else:
+                # 在备注中标记“（已失效）”
+                remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
+                if not remark.startswith('（已失效）'):
+                    remark = f'（已失效）{remark}'
+                    self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+
+                self.fileTableView.clearSelection()  # 取消所有选择
+
+                InfoBar.error(
+                    '失败',
+                    '所选的文件不存在',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+        else:
+            InfoBar.error(
+                '运行失败',
+                '已有正在运行的文件',
                 position=InfoBarPosition.TOP,
                 duration=1500,
                 parent=self.parentWindow
             )
+            logging.info('运行失败，已有正在运行的文件')
+
+    def editRemarkAction(self, row: int):
+        """
+        编辑文件备注
+        :param row:选中的单个行下标
+        """
+
+        # 获取原本的备注
+        origin_remark = self.fileTableView.item(row, 1).text()
+
+        # 显示备注修改窗口
+        w = RemarkModifyDialog(origin_remark, self.parentWindow)
+        if w.exec():
+            new_remark = w.remarkLineEdit.text()
+            self.fileTableView.setItem(row, 1, QTableWidgetItem(new_remark))
+            self.saveContents()
 
     def addFileAction(self):
         """添加文件行为"""
@@ -213,30 +317,59 @@ class HomeInterface(QWidget):
 
             self.saveContents()
 
-    def removeFileAction(self):
-        """删除文件行为"""
+    def removeFileAction(self, row: int = None):
+        """
+        删除文件行为
+        :param row:选中的单个行下标（默认为空）
+        """
 
-        selectedRanges = self.fileTableView.selectedRanges()
-        if selectedRanges:
+        # 获取删除前的行数
+        currentRowCount = self.fileTableView.rowCount()
+
+        if row is None:
+            selectedRanges = self.fileTableView.selectedRanges()
+            if selectedRanges:
+                w = Dialog('删除文件', '确认从列表中删除选中的文件吗？（此操作不会删除硬盘上的文件）', self.parentWindow)
+                if w.exec():
+                    logging.info('开始删除文件……')
+
+                    # 收集所有要删除的行索引（从大到小排序）
+                    rowsToDelete = set()
+                    for range_obj in selectedRanges:
+                        rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+
+                    # 从大到小删除（避免索引变化问题）
+                    i = 0
+                    for row in sorted(rowsToDelete, reverse=True):
+                        self.fileTableView.removeRow(row)
+                        i += 1
+
+                    self.fileTableView.setRowCount(currentRowCount - i)  # 减少行数
+                    self.fileTableView.clearSelection()  # 取消所有选择
+
+                    InfoBar.success(
+                        '成功',
+                        '已删除选中的文件',
+                        duration=1500,
+                        position=InfoBarPosition.TOP,
+                        parent=self.parentWindow
+                    )
+
+                    logging.info(f'已删除{i}个文件')
+                    self.saveContents()
+            else:
+                InfoBar.warning(
+                    '提示',
+                    '请选择至少一个文件',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+        else:
             w = Dialog('删除文件', '确认从列表中删除选中的文件吗？（此操作不会删除硬盘上的文件）', self.parentWindow)
             if w.exec():
-                logging.info('开始删除文件……')
-
-                # 收集所有要删除的行索引（从大到小排序）
-                rowsToDelete = set()
-                for range_obj in selectedRanges:
-                    rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
-
-                # 获取删除前的行数
-                currentRowCount = self.fileTableView.rowCount()
-
-                # 从大到小删除（避免索引变化问题）
-                i = 0
-                for row in sorted(rowsToDelete, reverse=True):
-                    self.fileTableView.removeRow(row)
-                    i += 1
-
-                self.fileTableView.setRowCount(currentRowCount - i)  # 减少行数
+                self.fileTableView.removeRow(row)
+                self.fileTableView.setRowCount(currentRowCount - 1)  # 减少行数
                 self.fileTableView.clearSelection()  # 取消所有选择
 
                 InfoBar.success(
@@ -247,61 +380,75 @@ class HomeInterface(QWidget):
                     parent=self.parentWindow
                 )
 
-                logging.info(f'已删除{i}个文件')
+                logging.info('已删除1个文件')
                 self.saveContents()
-        else:
-            InfoBar.warning(
-                '提示',
-                '请选择至少一个文件',
-                position=InfoBarPosition.TOP,
-                duration=1500,
-                parent=self.parentWindow
-            )
 
-    def openFolderAction(self):
-        """打开文件夹行为"""
+    def openFolderAction(self, row: int = None):
+        """
+        打开文件夹行为
+        :param row:选中的单个行下标（默认为空）
+        """
 
-        selectedRanges = self.fileTableView.selectedRanges()
+        if row is None:
+            selectedRanges = self.fileTableView.selectedRanges()
 
-        if selectedRanges:
-            # 收集所有要删除的行索引（从大到小排序）
-            selectedRowsIndex = set()
-            for range_obj in selectedRanges:
-                selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+            if selectedRanges:
+                # 收集所有要删除的行索引（从大到小排序）
+                selectedRowsIndex = set()
+                for range_obj in selectedRanges:
+                    selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
 
-            dirToOpen = []
-            for i in selectedRowsIndex:
-                item = self.fileTableView.item(i, 2)
-                filePath = item.text()
-                directory = os.path.dirname(filePath).replace('/', '\\')
-                if os.path.isdir(directory):
-                    dirToOpen.append(directory)
+                dirToOpen = []
+                for i in selectedRowsIndex:
+                    item = self.fileTableView.item(i, 2)
+                    filePath = item.text()
+                    directory = os.path.dirname(filePath).replace('/', '\\')
+                    if os.path.isdir(directory):
+                        dirToOpen.append(directory)
 
-            dirToOpen = set(dirToOpen)
-            if len(dirToOpen) > 3:
-                w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致卡顿，确认继续吗？', self.parentWindow)
-                if w.exec():
+                dirToOpen = set(dirToOpen)
+                if len(dirToOpen) > 3:
+                    w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致卡顿，确认继续吗？', self.parentWindow)
+                    if w.exec():
+                        for dir in dirToOpen:
+                            os.system(f'explorer "{dir}"')
+                elif len(dirToOpen) == 0:
+                    InfoBar.error(
+                        '失败',
+                        '所选文件的目录均不存在',
+                        position=InfoBarPosition.TOP,
+                        duration=1500,
+                        parent=self.parentWindow
+                    )
+                else:
                     for dir in dirToOpen:
                         os.system(f'explorer "{dir}"')
-            elif len(dirToOpen) == 0:
-                InfoBar.error(
-                    '失败',
-                    '所选文件的目录均不存在',
+                    logging.info('用户打开文件所在目录')
+            else:
+                InfoBar.warning(
+                    '提示',
+                    '请选择至少一个文件',
                     position=InfoBarPosition.TOP,
                     duration=1500,
                     parent=self.parentWindow
                 )
-            else:
-                for dir in dirToOpen:
-                    os.system(f'explorer "{dir}"')
         else:
-            InfoBar.warning(
-                '提示',
-                '请选择至少一个文件',
-                position=InfoBarPosition.TOP,
-                duration=1500,
-                parent=self.parentWindow
-            )
+            # 获取目录路径
+            item = self.fileTableView.item(row, 2)
+            filePath = item.text()
+            directory = os.path.dirname(filePath).replace('/', '\\')
+
+            if os.path.isdir(directory):
+                os.system(f'explorer "{directory}"')
+                logging.info('用户打开文件所在目录')
+            else:
+                InfoBar.error(
+                    '失败',
+                    '所选文件的目录不存在',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
 
     def saveContents(self):
         """将表格的内容保存至文件"""
