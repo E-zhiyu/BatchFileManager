@@ -294,6 +294,8 @@ class HomeInterface(QWidget):
                 self.fileTableView.setRowCount(len(files) + currentRowCount)
                 for index, oneInfo in enumerate(file_infos):
                     self.fileTableView.setItem(currentRowCount + index, 0, QTableWidgetItem(oneInfo[0]))
+                    self.fileTableView.setItem(currentRowCount + index, 1,
+                                               QTableWidgetItem(None))  # 即使没有获取信息也要填充防止获取内容时类型错误
                     self.fileTableView.setItem(currentRowCount + index, 2, QTableWidgetItem(files[index]))
                     self.fileTableView.setItem(currentRowCount + index, 3, QTableWidgetItem(oneInfo[1]))
                     self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
