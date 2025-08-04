@@ -1,9 +1,6 @@
-import errno
 import socket
 import threading
 import queue
-
-from PyQt6.QtCore import QTimer
 
 from qfluentwidgets import TextBrowser, LineEdit, InfoBar, InfoBarPosition
 

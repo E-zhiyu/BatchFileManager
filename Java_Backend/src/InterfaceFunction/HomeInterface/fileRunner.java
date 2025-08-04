@@ -69,11 +69,11 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
     }
 
     /**
-     * 批量运行文件
+     * 运行文件
      *
      * @param fileToRun 待运行文件的路径列表
      */
-    void runFiles(String fileToRun) throws IOException {
+    void runFile(String fileToRun) throws IOException {
         int exitCode = -1;
 
         //创建与主进程（客户端）的连接
@@ -145,7 +145,7 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
         fileRunner fileRunner = new fileRunner();
         fileRunner.fileToRun = fileRunner.receiveData();
         try {
-            fileRunner.runFiles(fileRunner.fileToRun);
+            fileRunner.runFile(fileRunner.fileToRun);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
