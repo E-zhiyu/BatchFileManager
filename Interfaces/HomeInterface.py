@@ -46,25 +46,25 @@ class HomeInterface(QWidget):
 
         self.runButton = PushButton(FIF.PLAY.icon(color='green'), '运行文件')
         self.runButton.setToolTip('运行单个选中的文件')
-        self.runButton.installEventFilter(ToolTipFilter(self.runButton,position=ToolTipPosition.BOTTOM))
+        self.runButton.installEventFilter(ToolTipFilter(self.runButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.runButton)
         self.runButton.clicked.connect(self.runFileAction)
 
         self.addButton = PushButton(FIF.ADD, "添加文件")
         self.addButton.setToolTip('将文件添加至表格中')
-        self.addButton.installEventFilter(ToolTipFilter(self.addButton,position=ToolTipPosition.BOTTOM))
+        self.addButton.installEventFilter(ToolTipFilter(self.addButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.addButton)
         self.addButton.clicked.connect(self.addFileAction)
 
         self.removeButton = PushButton(FIF.DELETE.icon(color='red'), '删除文件')
         self.removeButton.setToolTip('将选中的文件移出表格')
-        self.removeButton.installEventFilter(ToolTipFilter(self.removeButton,position=ToolTipPosition.BOTTOM))
+        self.removeButton.installEventFilter(ToolTipFilter(self.removeButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.removeButton)
         self.removeButton.clicked.connect(self.removeFileAction)
 
         self.openFolderButton = PushButton(FIF.FOLDER, '打开所在文件夹')
         self.openFolderButton.setToolTip('打开选中文件的文件夹')
-        self.openFolderButton.installEventFilter(ToolTipFilter(self.openFolderButton,position=ToolTipPosition.BOTTOM))
+        self.openFolderButton.installEventFilter(ToolTipFilter(self.openFolderButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.openFolderButton)
         self.openFolderButton.clicked.connect(self.openFolderAction)
 
@@ -114,17 +114,32 @@ class HomeInterface(QWidget):
                 if not self.parentWindow.cmdInterface.sktClient.running:
                     item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
                     filePath = item.text()
-                    JarConnector('./backend/fileRunner.jar', [filePath])
-                    self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
+                    if os.path.isfile(filePath):
+                        JarConnector('./backend/fileRunner.jar', [filePath])
+                        self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
 
-                    InfoBar.success(
-                        '开始运行',
-                        '请前往控制台界面查看运行详情',
-                        position=InfoBarPosition.TOP,
-                        duration=1500,
-                        parent=self.parentWindow
-                    )
-                    logging.info('文件成功运行')
+                        InfoBar.success(
+                            '开始运行',
+                            '请前往控制台界面查看运行详情',
+                            position=InfoBarPosition.TOP,
+                            duration=1500,
+                            parent=self.parentWindow
+                        )
+                        logging.info('文件成功运行')
+                    else:
+                        #在备注中标记“（已失效）”
+                        remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
+                        if not remark.startswith('（已失效）'):
+                            remark = f'（已失效）{remark}'
+                            self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+
+                        InfoBar.error(
+                            '失败',
+                            '所选的文件不存在',
+                            position=InfoBarPosition.TOP,
+                            duration=1500,
+                            parent=self.parentWindow
+                        )
                 else:
                     InfoBar.error(
                         '运行失败',
@@ -204,11 +219,17 @@ class HomeInterface(QWidget):
                 for range_obj in selectedRanges:
                     rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
 
+                # 获取删除前的行数
+                currentRowCount = self.fileTableView.rowCount()
+
                 # 从大到小删除（避免索引变化问题）
                 i = 0
                 for row in sorted(rowsToDelete, reverse=True):
                     self.fileTableView.removeRow(row)
                     i += 1
+
+                # 减少行数
+                self.fileTableView.setRowCount(currentRowCount - i)
 
                 InfoBar.success(
                     '成功',
@@ -245,7 +266,8 @@ class HomeInterface(QWidget):
                 item = self.fileTableView.item(i, 2)
                 filePath = item.text()
                 directory = os.path.dirname(filePath).replace('/', '\\')
-                dirToOpen.append(directory)
+                if os.path.isdir(directory):
+                    dirToOpen.append(directory)
 
             dirToOpen = set(dirToOpen)
             if len(dirToOpen) > 3:
@@ -253,6 +275,14 @@ class HomeInterface(QWidget):
                 if w.exec():
                     for dir in dirToOpen:
                         os.system(f'explorer "{dir}"')
+            elif len(dirToOpen) == 0:
+                InfoBar.error(
+                    '失败',
+                    '所选文件的目录均不存在',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
             else:
                 for dir in dirToOpen:
                     os.system(f'explorer "{dir}"')
@@ -293,6 +323,11 @@ class HomeInterface(QWidget):
         try:
             with open('./config/fileTableContents.json', 'r', encoding='utf-8') as f:
                 allRows = json.load(f)
+
+                # 检测文件是否存在
+                for rowIndex, fileInfo in enumerate(allRows):
+                    if not os.path.isfile(fileInfo[2]) and not allRows[rowIndex][1].startswith('（已失效）'):
+                        allRows[rowIndex][1] = f'（已失效）{fileInfo[1]}'  # 如果文件不存在则在备注中标记
 
                 # 设置表格行数
                 self.fileTableView.setRowCount(len(allRows))
