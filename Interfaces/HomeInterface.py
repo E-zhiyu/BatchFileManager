@@ -137,7 +137,7 @@ class HomeInterface(QWidget):
         else:
             InfoBar.warning(
                 '提示',
-                '请选择至少一个文件',
+                '请先选择一个文件',
                 position=InfoBarPosition.TOP,
                 duration=1500,
                 parent=self.parentWindow
