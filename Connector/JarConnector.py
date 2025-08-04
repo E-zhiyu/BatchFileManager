@@ -17,6 +17,7 @@ class JarConnector:
         # 启动Java进程
         self.java_process = subprocess.Popen(
             ["java", '-jar', self.target],
+            creationflags=subprocess.CREATE_NO_WINDOW,  # 关键参数，不显示窗口
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
