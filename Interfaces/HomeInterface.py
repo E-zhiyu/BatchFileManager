@@ -195,6 +195,7 @@ class HomeInterface(QWidget):
                         position=InfoBarPosition.TOP,
                         parent=self.parentWindow
                     )
+                    return  # 提前结束防止运行下面的语句
                 else:
                     item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
             else:
@@ -205,9 +206,11 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                return  # 提前结束防止运行下面的语句
         else:
             item = self.fileTableView.item(row, 2)
 
+        # 运行文件
         if not self.parentWindow.cmdInterface.sktClient.running:
             filePath = item.text()
             if os.path.isfile(filePath):
