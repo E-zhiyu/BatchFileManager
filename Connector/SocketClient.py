@@ -1,9 +1,6 @@
-import errno
 import socket
 import threading
 import queue
-
-from PyQt6.QtCore import QTimer
 
 from qfluentwidgets import TextBrowser, LineEdit, InfoBar, InfoBarPosition
 
@@ -37,8 +34,8 @@ class SocketClient:
         try:
             self.sock.connect((self.host, self.port))
             self.sock.settimeout(0)  # 成功连接则取消超时
-            self.outputTextBrowser.insertPlainText("【BFM】已连接到Java进程服务器\n")
-            logging.info("【BFM】已连接到Java进程服务器")
+            self.outputTextBrowser.insertPlainText("【BFM】已连接到Java文件运行进程\n")
+            logging.info("【BFM】已连接到Java文件运行进程")
             self.running = True
         except ConnectionRefusedError:
             self.outputTextBrowser.insertPlainText("【BFM】错误: 无法连接到服务器\n")

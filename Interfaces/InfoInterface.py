@@ -8,7 +8,7 @@ from qfluentwidgets import FluentIcon as FIF
 from Interfaces import version
 
 help_md = """\
-# 文件操作
+### 文件操作
 
 - 使用主页的“添加文件”按钮将你想要的文件添加至表格中
 - 文件表格支持多选，多选的按键逻辑与Windows文件资源管理器一致
@@ -16,19 +16,19 @@ help_md = """\
 - 点击“打开文件夹”按钮可以打开文件所在位置，支持同时打开多个文件夹
 - 单选状态下点击“运行文件”按钮可以运行选中的文件，此时文件的运行细节将会输出到“控制台”界面，用户也可通过该界面输入命令
 
-# 右键菜单
+### 右键菜单
 
 - 光标对准文件表格任意一行右键将会呼出右键菜单
 - 右键菜单的各功能与顶部按钮相同，只是不能同时操作多个文件而已
 
-# 文件失效
+### 文件失效
 
 - 软件启动时将逐一判断已添加的文件是否存在，若文件被删除或移动至其他位置则会在“备注”栏提示用户文件已失效
 - 尝试运行失效文件时将会再次检测文件是否存在，若文件存在则能够成功运行并消除失效标记
 - 失效的文件仍能够尝试打开所在目录，除非该文件的目录也不存在
 - 软件不会自动移除失效的文件，便于用户排查文件失效的原因
 
-# 文件运行
+### 文件运行
 
 - 一次只能同时运行一个文件
 - 在主页选中文件并点击“运行文件”按钮后，“控制台”界面将监听文件运行的输出内容
@@ -63,6 +63,7 @@ class TextMessageBox(MessageBoxBase):
         self.widget.setMinimumWidth(550)  # 设置最小窗口宽度
         self.widget.setFixedHeight(500)  # 设置固定窗口高度
         self.cancelButton.hide()  # 隐藏取消按钮
+        self.yesButton.setText('确定')
 
         titleLabel = SubtitleLabel(title)
         self.viewLayout.addWidget(titleLabel)

@@ -2,7 +2,7 @@
 import json
 import os
 
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
 
 from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog, ToolTipFilter, ToolTipPosition, \
@@ -12,7 +12,6 @@ from qfluentwidgets import FluentIcon as FIF
 from AppConfig.config import cfg
 from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
-from qfluentwidgets.components.widgets.info_bar import BottomRightInfoBarManager
 
 
 class RemarkModifyDialog(MessageBoxBase):
@@ -33,7 +32,12 @@ class RemarkModifyDialog(MessageBoxBase):
         self.remarkLineEdit = LineEdit()
         self.remarkLineEdit.setPlaceholderText('请输入备注（可留空）')
         self.remarkLineEdit.setText(origin_remark)
+        QTimer.singleShot(100, self.remarkLineEdit.setFocus)  # 界面完全刷新后设置为焦点
+        self.remarkLineEdit.returnPressed.connect(self._MessageBoxBase__onYesButtonClicked)  # 按下回车确认修改
         self.viewLayout.addWidget(self.remarkLineEdit)
+
+        self.yesButton.setText('确认')
+        self.cancelButton.setText('取消')
 
 
 class HomeInterface(QWidget):
@@ -195,6 +199,7 @@ class HomeInterface(QWidget):
                         position=InfoBarPosition.TOP,
                         parent=self.parentWindow
                     )
+                    return  # 提前结束防止运行下面的语句
                 else:
                     item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
             else:
@@ -205,9 +210,11 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                return  # 提前结束防止运行下面的语句
         else:
             item = self.fileTableView.item(row, 2)
 
+        # 运行文件
         if not self.parentWindow.cmdInterface.sktClient.running:
             filePath = item.text()
             if os.path.isfile(filePath):
@@ -291,6 +298,8 @@ class HomeInterface(QWidget):
                 self.fileTableView.setRowCount(len(files) + currentRowCount)
                 for index, oneInfo in enumerate(file_infos):
                     self.fileTableView.setItem(currentRowCount + index, 0, QTableWidgetItem(oneInfo[0]))
+                    self.fileTableView.setItem(currentRowCount + index, 1,
+                                               QTableWidgetItem(None))  # 即使没有获取信息也要填充防止获取内容时类型错误
                     self.fileTableView.setItem(currentRowCount + index, 2, QTableWidgetItem(files[index]))
                     self.fileTableView.setItem(currentRowCount + index, 3, QTableWidgetItem(oneInfo[1]))
                     self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
@@ -408,10 +417,10 @@ class HomeInterface(QWidget):
 
                 dirToOpen = set(dirToOpen)
                 if len(dirToOpen) > 3:
-                    w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致卡顿，确认继续吗？', self.parentWindow)
+                    w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致桌面混乱，确认继续吗？', self.parentWindow)
                     if w.exec():
                         for dir in dirToOpen:
-                            os.system(f'explorer "{dir}"')
+                            os.startfile(dir)
                 elif len(dirToOpen) == 0:
                     InfoBar.error(
                         '失败',
@@ -422,7 +431,7 @@ class HomeInterface(QWidget):
                     )
                 else:
                     for dir in dirToOpen:
-                        os.system(f'explorer "{dir}"')
+                        os.startfile(dir)
                     logging.info('用户打开文件所在目录')
             else:
                 InfoBar.warning(
@@ -439,7 +448,7 @@ class HomeInterface(QWidget):
             directory = os.path.dirname(filePath).replace('/', '\\')
 
             if os.path.isdir(directory):
-                os.system(f'explorer "{directory}"')
+                os.startfile(directory)
                 logging.info('用户打开文件所在目录')
             else:
                 InfoBar.error(

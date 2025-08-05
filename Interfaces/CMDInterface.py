@@ -30,8 +30,10 @@ class CMDInterface(QWidget):
         # 加载其他控件
         self.initControls()
 
-        # 实例化连接子进程控制台的连接器
+        # 实例化连接子进程控制台的套接字客户端
         self.sktClient = SocketClient(self, self.runCommandLineEdit, self.outputTextBrowser)
+
+        # 设置控件信号连接
         self.sendCommandButton.clicked.connect(self.sktClient.send_command)
         self.runCommandLineEdit.returnPressed.connect(self.sktClient.send_command)
 
