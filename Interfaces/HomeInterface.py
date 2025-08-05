@@ -2,7 +2,7 @@
 import json
 import os
 
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
 
 from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog, ToolTipFilter, ToolTipPosition, \
@@ -12,7 +12,6 @@ from qfluentwidgets import FluentIcon as FIF
 from AppConfig.config import cfg
 from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
-from qfluentwidgets.components.widgets.info_bar import BottomRightInfoBarManager
 
 
 class RemarkModifyDialog(MessageBoxBase):
@@ -33,7 +32,12 @@ class RemarkModifyDialog(MessageBoxBase):
         self.remarkLineEdit = LineEdit()
         self.remarkLineEdit.setPlaceholderText('请输入备注（可留空）')
         self.remarkLineEdit.setText(origin_remark)
+        QTimer.singleShot(100, self.remarkLineEdit.setFocus)  # 界面完全刷新后设置为焦点
+        self.remarkLineEdit.returnPressed.connect(self._MessageBoxBase__onYesButtonClicked)  # 按下回车确认修改
         self.viewLayout.addWidget(self.remarkLineEdit)
+
+        self.yesButton.setText('确认')
+        self.cancelButton.setText('取消')
 
 
 class HomeInterface(QWidget):
