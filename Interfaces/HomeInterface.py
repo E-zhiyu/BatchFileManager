@@ -417,10 +417,10 @@ class HomeInterface(QWidget):
 
                 dirToOpen = set(dirToOpen)
                 if len(dirToOpen) > 3:
-                    w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致卡顿，确认继续吗？', self.parentWindow)
+                    w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致桌面混乱，确认继续吗？', self.parentWindow)
                     if w.exec():
                         for dir in dirToOpen:
-                            os.system(f'explorer "{dir}"')
+                            os.startfile(dir)
                 elif len(dirToOpen) == 0:
                     InfoBar.error(
                         '失败',
@@ -431,7 +431,7 @@ class HomeInterface(QWidget):
                     )
                 else:
                     for dir in dirToOpen:
-                        os.system(f'explorer "{dir}"')
+                        os.startfile(dir)
                     logging.info('用户打开文件所在目录')
             else:
                 InfoBar.warning(
@@ -448,7 +448,7 @@ class HomeInterface(QWidget):
             directory = os.path.dirname(filePath).replace('/', '\\')
 
             if os.path.isdir(directory):
-                os.system(f'explorer "{directory}"')
+                os.startfile(directory)
                 logging.info('用户打开文件所在目录')
             else:
                 InfoBar.error(
