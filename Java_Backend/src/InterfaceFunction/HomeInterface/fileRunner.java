@@ -6,6 +6,7 @@ import org.json.JSONArray;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class fileRunner implements GrandProcessConnector<String, Integer> {
     String fileToRun;
@@ -96,9 +97,11 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
 
             // 读取进程输出并发送到客户端
             new Thread(() -> {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                try (InputStream is = process.getInputStream();
+                InputStreamReader isr = new InputStreamReader(is, "GBK");
+                BufferedReader br = new BufferedReader(isr)) {
                     String line;
-                    while ((line = reader.readLine()) != null) {
+                    while ((line = br.readLine()) != null) {
                         out.println(line);
                         out.flush();
                     }
@@ -110,7 +113,7 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
             // 从客户端读取命令并写入进程
             new Thread(() -> {
                 try (BufferedWriter writer = new BufferedWriter(
-                        new OutputStreamWriter(process.getOutputStream()))) {
+                        new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8))) {
                     String command;
                     while ((command = in.readLine()) != null) {
                         //判断是否为终止进程命令
