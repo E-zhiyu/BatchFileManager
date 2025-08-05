@@ -14,7 +14,7 @@ class SocketClient:
         连接至Java子进程控制台的构造方法
         :param parent:创建实例的界面
         :param userCommandControl:用户输入命令的控件
-        :param outputControl:待更新的GUI控件
+        :param outputControl:控制台内容输出控件
         :param host:目标IP地址
         :param port:目标端口
         """
@@ -26,6 +26,7 @@ class SocketClient:
         self.command_queue = queue.Queue()
         self.running = False
         self.autoScroll = True
+        self.rcvTimeoutCount = 0  # 接收超时计数器
 
     def setup_socket(self):
         """创建套接字并启动通信线程"""
@@ -33,30 +34,32 @@ class SocketClient:
         self.sock.settimeout(3.0)
         try:
             self.sock.connect((self.host, self.port))
-            self.sock.settimeout(0)  # 成功连接则取消超时
+            # self.sock.settimeout(0)  # 成功连接则取消超时
             self.outputTextBrowser.insertPlainText("【BFM】已连接到Java文件运行进程\n")
             logging.info("【BFM】已连接到Java文件运行进程")
             self.running = True
         except ConnectionRefusedError:
-            self.outputTextBrowser.insertPlainText("【BFM】错误: 无法连接到服务器\n")
-            logging.error('【BFM】错误: 无法连接到服务器')
+            self.outputTextBrowser.insertPlainText("【BFM】错误: 端口8080被占用，无法连接至服务器\n")
+            logging.error('【BFM】错误: 端口8080被占用，无法连接至服务器')
+            self.on_close()
         except socket.timeout:
             self.outputTextBrowser.insertPlainText('【BFM】错误：连接子进程超时\n')
             logging.warning('【BFM】错误：连接子进程超时')
+            self.on_close()
+        else:
+            # 启动接收线程
+            self.receive_thread = threading.Thread(
+                target=self.receive_messages,
+                daemon=True
+            )
+            self.receive_thread.start()
 
-        # 启动接收线程
-        self.receive_thread = threading.Thread(
-            target=self.receive_messages,
-            daemon=True
-        )
-        self.receive_thread.start()
-
-        # 启动发送线程
-        self.send_thread = threading.Thread(
-            target=self.process_command_queue,
-            daemon=True
-        )
-        self.send_thread.start()
+            # 启动发送线程
+            self.send_thread = threading.Thread(
+                target=self.process_command_queue,
+                daemon=True
+            )
+            self.send_thread.start()
 
     def send_command(self, custom_cmd: str = ''):
         """将命令放入队列(由发送线程处理)"""
@@ -107,8 +110,11 @@ class SocketClient:
                 continue
             except socket.timeout:
                 self.outputTextBrowser.insertPlainText('【BFM】发送超时\n')
+                logging.warning('【BFM】发送超时')
             except Exception as e:
                 self.outputTextBrowser.insertPlainText(f"【BFM】发送错误: {str(e)}\n")
+                logging.error(f"【BFM】发送错误: {str(e)}")
+                self.on_close()
                 break
 
     def receive_messages(self):
@@ -117,8 +123,8 @@ class SocketClient:
             try:
                 data = self.sock.recv(1024).decode('utf-8')
 
-                # 更新GUI
-                self.outputTextBrowser.insertPlainText(data)
+                self.outputTextBrowser.insertPlainText(data)  # 更新GUI
+                self.rcvTimeoutCount = 0  # 清空接收超时计数器
 
                 # 滚动到底部
                 if self.autoScroll:
@@ -132,25 +138,38 @@ class SocketClient:
                     self.on_close()
                     break
                 elif data.startswith('#'):
-                    logging.info(data)
+                    logging.info(data.rstrip('\n'))
                     self.on_close()
                     break
             except ConnectionResetError:
-                self.outputTextBrowser.insertPlainText('【BFM】Java后端服务器已关闭\n')
-                self.running = False
+                self.outputTextBrowser.insertPlainText('【BFM】Java文件运行服务已关闭\n')
+                logging.info('【BFM】Java文件运行服务已关闭')
+                self.on_close()
                 break
             except socket.timeout:
-                self.outputTextBrowser.insertPlainText('【BFM】接收超时\n')
+                if self.rcvTimeoutCount <= 3:
+                    self.rcvTimeoutCount += 1
+                    self.outputTextBrowser.insertPlainText('【BFM】接收超时\n')
+                    logging.warning('【BFM】接收超时')
+                else:
+                    self.outputTextBrowser.insertPlainText('【BFM】超时次数过多，文件运行进程已终止\n')
+                    self.outputTextBrowser.insertPlainText(
+                        '【BFM】提示：使用netstat -ano | findstr \"8080\"以查询端口占用情况\n')
+                    logging.error('【BFM】超时次数过多，文件运行进程已终止，请检查8080端口占用情况')
+                    self.on_close()
+                    break
             except socket.error as e:
                 if e.errno == 10035:  # 处理非阻塞错误
                     continue
             except Exception as e:
                 self.outputTextBrowser.insertPlainText(f'【BFM】接收错误：{str(e)}\n')
-                self.running = False
+                logging.error(f'【BFM】接收错误：{str(e)}')
+                self.on_close()
                 break
 
     def on_close(self):
         """关闭应用时的清理工作"""
+        self.rcvTimeoutCount = 0  # 超时计数器归零
         self.running = False
         if hasattr(self, 'sock'):
             self.sock.close()

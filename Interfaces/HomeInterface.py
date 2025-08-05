@@ -234,7 +234,6 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
-                logging.info('文件成功运行')
             else:
                 # 在备注中标记“（已失效）”
                 remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
