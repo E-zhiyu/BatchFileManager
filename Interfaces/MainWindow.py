@@ -1,6 +1,4 @@
 """主窗口模块"""
-from typing import override
-
 from PyQt6.QtCore import QSize, QEventLoop, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
@@ -28,6 +26,19 @@ class MainWindow(FluentWindow):
 
         # 结束启动动画
         self.splashScreen.finish()
+
+        # 文件运行状态改变时修改标题
+        self.cmdInterface.socketClient.runningChanged.connect(self.changeTitle)
+
+    def changeTitle(self, isRunning: bool = False):
+        """
+        根据文件运行状态修改标题
+        :param isRunning: 文件是否运行
+        """
+        if isRunning:
+            self.setWindowTitle(f'BatchFileManager-{version}（正在运行）')
+        else:
+            self.setWindowTitle(f'BatchFileManager-{version}')
 
     def initSubInterfaces(self):
         """初始化子窗口"""
@@ -72,7 +83,7 @@ class MainWindow(FluentWindow):
         """重写关闭事件"""
 
         # 检测是否有程序正在运行并弹出对话框
-        if self.cmdInterface.sktClient.running:
+        if self.cmdInterface.socketClient.running:
             w = Dialog('文件正在运行', '当前有文件正在运行，关闭应用将强制结束进程，确认继续吗？')
             if not w.exec():
                 event.ignore()

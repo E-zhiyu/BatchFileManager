@@ -2,14 +2,18 @@ import socket
 import threading
 import queue
 
+from PyQt6.QtCore import pyqtSignal, QObject
+
 from qfluentwidgets import TextBrowser, LineEdit, InfoBar, InfoBarPosition
 
 from Logs.log_recorder import logging
 
 
-class SocketClient:
-    def __init__(self, parent, userCommandControl: LineEdit, outputControl: TextBrowser, host='localhost',
-                 port=8080):
+class SocketClient(QObject):
+    runningChanged = pyqtSignal(bool)
+
+    def __init__(self, parent, userCommandControl: LineEdit, outputControl: TextBrowser, host='localhost', port=8080,
+                 *args, **kwargs):
         """
         连接至Java子进程控制台的构造方法
         :param parent:创建实例的界面
@@ -18,6 +22,7 @@ class SocketClient:
         :param host:目标IP地址
         :param port:目标端口
         """
+        super().__init__(parent, *args, **kwargs)
         self.parent = parent
         self.userCommandControl = userCommandControl
         self.outputTextBrowser = outputControl
@@ -37,6 +42,7 @@ class SocketClient:
             self.outputTextBrowser.insertPlainText("【BFM】已连接到Java文件运行进程\n")
             logging.info("【BFM】已连接到Java文件运行进程")
             self.running = True
+            self.runningChanged.emit(True)
         except ConnectionRefusedError:
             self.outputTextBrowser.insertPlainText("【BFM】错误: 端口8080被占用，无法连接至服务器\n")
             logging.error('【BFM】错误: 端口8080被占用，无法连接至服务器')
@@ -172,5 +178,6 @@ class SocketClient:
         """关闭应用时的清理工作"""
         self.rcvTimeoutCount = 0  # 超时计数器归零
         self.running = False
+        self.runningChanged.emit(self.running)
         if hasattr(self, 'sock'):
             self.sock.close()

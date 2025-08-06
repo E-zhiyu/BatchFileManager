@@ -31,11 +31,11 @@ class CMDInterface(QWidget):
         self.initControls()
 
         # 实例化连接子进程控制台的套接字客户端
-        self.sktClient = SocketClient(self, self.runCommandLineEdit, self.outputTextBrowser)
+        self.socketClient = SocketClient(self, self.cmdInputLineEdit, self.outputTextBrowser)
 
         # 设置控件信号连接
-        self.sendCommandButton.clicked.connect(self.sktClient.send_command)
-        self.runCommandLineEdit.returnPressed.connect(self.sktClient.send_command)
+        self.sendCommandButton.clicked.connect(self.socketClient.send_command)
+        self.cmdInputLineEdit.returnPressed.connect(self.socketClient.send_command)
 
     def initControls(self):
         """初始化控件"""
@@ -46,9 +46,9 @@ class CMDInterface(QWidget):
         runCommandLayout = QHBoxLayout()
         self.mainLayout.addLayout(runCommandLayout)
 
-        self.runCommandLineEdit = LineEdit()  # 命令输入框
-        self.runCommandLineEdit.setPlaceholderText('输入待运行的命令')
-        runCommandLayout.addWidget(self.runCommandLineEdit, 1, )
+        self.cmdInputLineEdit = LineEdit()  # 命令输入框
+        self.cmdInputLineEdit.setPlaceholderText('输入待运行的命令')
+        runCommandLayout.addWidget(self.cmdInputLineEdit, 1, )
 
         self.sendCommandButton = PushButton(text='发送命令', icon=FIF.SEND)
         self.sendCommandButton.setToolTip('将命令发送至后台(Enter)')
@@ -80,12 +80,12 @@ class CMDInterface(QWidget):
         self.mainLayout.addWidget(self.outputTextBrowser, 1)
 
     def setAutoScroll(self):
-        self.sktClient.autoScroll = self.autoScrollCheckBox.isChecked()
+        self.socketClient.autoScroll = self.autoScrollCheckBox.isChecked()
 
     def startCommunication(self):
         """启动与Java子进程的通信"""
         self.clearOutput()
-        self.sktClient.setup_socket()
+        self.socketClient.setup_socket()
 
     def stopCommunicationAndKill(self, withMessageBox: bool = False):
         """
@@ -93,12 +93,12 @@ class CMDInterface(QWidget):
         :param withMessageBox:是否弹出确认框
         """
         if not withMessageBox:
-            self.sktClient.send_command('#kill#')
+            self.socketClient.send_command('#kill#')
         else:
-            if self.sktClient.running:
+            if self.socketClient.running:
                 w = Dialog('结束进程', '确认要结束进程吗？这可能导致不可逆的后果', self.parentWindow)
                 if w.exec():
-                    self.sktClient.send_command('#kill#')
+                    self.socketClient.send_command('#kill#')
             else:
                 InfoBar.error(
                     "错误",

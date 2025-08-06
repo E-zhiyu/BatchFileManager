@@ -215,7 +215,7 @@ class HomeInterface(QWidget):
             item = self.fileTableView.item(row, 2)
 
         # 运行文件
-        if not self.parentWindow.cmdInterface.sktClient.running:
+        if not self.parentWindow.cmdInterface.socketClient.running:
             filePath = item.text()
             if os.path.isfile(filePath):
                 # 在备注中删除“（已失效）”字样
