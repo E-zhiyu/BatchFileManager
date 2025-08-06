@@ -224,16 +224,26 @@ class HomeInterface(QWidget):
                     remark = remark.lstrip('（已失效）')
                     self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
 
-                JarConnector('./backend/fileRunner.jar', [filePath])
-                self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
-
-                InfoBar.success(
-                    '开始运行',
-                    '请前往控制台界面查看运行详情',
-                    position=InfoBarPosition.TOP,
-                    duration=1500,
-                    parent=self.parentWindow
-                )
+                running_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
+                ackCode = running_cnt.receiveData()
+                if ackCode:
+                    InfoBar.success(
+                        '开始运行',
+                        '请前往控制台界面查看运行详情',
+                        position=InfoBarPosition.TOP,
+                        duration=1500,
+                        parent=self.parentWindow
+                    )
+                    self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
+                else:
+                    InfoBar.error(
+                        "运行失败",
+                        "由于未知原因文件无法运行",
+                        position=InfoBarPosition.TOP,
+                        duration=1500,
+                        parent=self.parentWindow
+                    )
+                    return
             else:
                 # 在备注中标记“（已失效）”
                 remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()

@@ -96,7 +96,7 @@ class CMDInterface(QWidget):
             self.socketClient.send_command('#kill#')
         else:
             if self.socketClient.running:
-                w = Dialog('结束进程', '确认要结束进程吗？这可能导致不可逆的后果', self.parentWindow)
+                w = Dialog('结束进程', '确认要结束进程吗？这可能导致进程无法正常关闭', self.parentWindow)
                 if w.exec():
                     self.socketClient.send_command('#kill#')
             else:

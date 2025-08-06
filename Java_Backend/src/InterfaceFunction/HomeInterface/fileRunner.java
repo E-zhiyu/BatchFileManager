@@ -7,9 +7,11 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
-public class fileRunner implements GrandProcessConnector<String, Integer> {
-    String fileToRun;
+public class fileRunner implements GrandProcessConnector<String, Boolean> {
+    static String fileToRun;
 
     /**
      * @return 从主进程获取到的文件路径列表
@@ -28,19 +30,20 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
                 fileToRun = ja.getString(i);
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            this.sendData(false);  //Python端消息接收失败异常处理
+            fileToRun = "";
         }
 
         return fileToRun;
     }
 
     @Override
-    public void sendData(Integer data) {
-//        List<Integer> l = new ArrayList<>();
-//        l.add(data);
-//
-//        JSONArray jsonArray = new JSONArray(l);
-//        System.out.println(jsonArray);
+    public void sendData(Boolean data) {
+        List<Boolean> l = new ArrayList<>();
+        l.add(data);
+
+        JSONArray jsonArray = new JSONArray(l);
+        System.out.println(jsonArray);
     }
 
     /**
@@ -53,20 +56,6 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
         if (process.isAlive()) {
             process.destroyForcibly();
         }
-
-        if (process.isAlive()) {
-            // 获取进程PID
-            long pid = process.pid();
-
-            // Windows系统
-            if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                try {
-                    Runtime.getRuntime().exec("taskkill /F /PID " + pid);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
     }
 
     /**
@@ -74,43 +63,42 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
      *
      * @param fileToRun 待运行文件的路径列表
      */
-    void runFile(String fileToRun) throws IOException {
+    void runFile(String fileToRun) {
         int exitCode = -1;
 
         //创建与主进程（客户端）的连接
-        ServerSocket serverSocket = new ServerSocket(8080);
-        Socket clientSocket = serverSocket.accept();
-        PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
-        BufferedReader in = new BufferedReader(
-                new InputStreamReader(clientSocket.getInputStream()));
+        try (ServerSocket serverSocket = new ServerSocket(8080);) {
+            Socket clientSocket = serverSocket.accept();
+            PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+            BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream()));
 
-        //创建文件运行进程
-        File file = new File(fileToRun);
-        ProcessBuilder builder = new ProcessBuilder("cmd", "/c", file.getAbsolutePath());
+            //创建文件运行进程
+            File file = new File(fileToRun);
+            ProcessBuilder builder = new ProcessBuilder("cmd", "/c", file.getAbsolutePath());
 
-        builder.directory(file.getParentFile());  //设置工作目录
-        builder.redirectErrorStream(true);  // 合并错误流
+            builder.directory(file.getParentFile());  //设置工作目录
+            builder.redirectErrorStream(true);  // 合并错误流
 
-        //创建并启动进程
-        try {
+            //创建并启动进程
             Process process = builder.start();
 
-            // 读取进程输出并发送到客户端
+            // 启动读取进程输出并发送到客户端
             new Thread(() -> {
                 try (InputStream is = process.getInputStream();
-                InputStreamReader isr = new InputStreamReader(is, "GBK");
-                BufferedReader br = new BufferedReader(isr)) {
+                     InputStreamReader isr = new InputStreamReader(is, "GBK");
+                     BufferedReader br = new BufferedReader(isr)) {
                     String line;
                     while ((line = br.readLine()) != null) {
                         out.println(line);
                         out.flush();
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch (IOException e) {  //读出内容时的异常处理
+                    out.println("[ERROR] " + e.getMessage());
                 }
             }).start();
 
-            // 从客户端读取命令并写入进程
+            // 启动从客户端读取命令并写入进程
             new Thread(() -> {
                 try (BufferedWriter writer = new BufferedWriter(
                         new OutputStreamWriter(process.getOutputStream(), StandardCharsets.UTF_8))) {
@@ -126,31 +114,31 @@ public class fileRunner implements GrandProcessConnector<String, Integer> {
                         writer.newLine();
                         writer.flush();
                     }
-                } catch (IOException e) {
-                    e.printStackTrace();
+                } catch (IOException e) {  //写入命令时的异常处理
+                    out.println("[ERROR] " + e.getMessage());
                 }
             }).start();
 
-            exitCode = process.waitFor();
-            out.println("#进程已退出，代码：" + exitCode);
-            out.flush();
-
-        } catch (IOException e) {
-            throw new IOException();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            out.println("[ERROR] 执行被中断");
-            out.flush();
+            try {
+                exitCode = process.waitFor();
+                out.println("#进程已退出，代码：" + exitCode);
+                out.flush();
+            } catch (InterruptedException e) {  //获取返回值时的异常处理
+                Thread.currentThread().interrupt();
+                out.println("[ERROR] 执行被中断");
+                out.flush();
+            }
+        } catch (IOException _) {  //创建套接字时的异常处理
+            //Python主进程已处理无法连接至套接字的情况，此处无需异常处理，直接结束进程即可
         }
     }
 
     public static void main(String[] args) {
         fileRunner fileRunner = new fileRunner();
-        fileRunner.fileToRun = fileRunner.receiveData();
-        try {
-            fileRunner.runFile(fileRunner.fileToRun);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        fileToRun = fileRunner.receiveData();
+        if (!fileToRun.isEmpty()) {
+            fileRunner.sendData(true);  //成功接收文件路径则返回1
+            fileRunner.runFile(fileToRun);
         }
     }
 }
