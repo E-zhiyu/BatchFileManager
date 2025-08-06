@@ -34,7 +34,6 @@ class SocketClient:
         self.sock.settimeout(3.0)
         try:
             self.sock.connect((self.host, self.port))
-            # self.sock.settimeout(0)  # 成功连接则取消超时
             self.outputTextBrowser.insertPlainText("【BFM】已连接到Java文件运行进程\n")
             logging.info("【BFM】已连接到Java文件运行进程")
             self.running = True
@@ -141,6 +140,8 @@ class SocketClient:
                     logging.info(data.rstrip('\n'))
                     self.on_close()
                     break
+
+                self.sock.settimeout(0)  # 成功接收则取消超时
             except ConnectionResetError:
                 self.outputTextBrowser.insertPlainText('【BFM】Java文件运行服务已关闭\n')
                 logging.info('【BFM】Java文件运行服务已关闭')
