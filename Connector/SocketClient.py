@@ -68,7 +68,7 @@ class SocketClient:
             logging.info(f'用户输入命令：{cmd}')
         else:
             cmd = custom_cmd
-            logging.info(f'用户尝试结束进程')
+            logging.info(f'尝试结束进程')
 
         if cmd and self.running:
             self.outputTextBrowser.insertPlainText(f">{cmd}\n")

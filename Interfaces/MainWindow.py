@@ -1,4 +1,6 @@
 """主窗口模块"""
+from typing import override
+
 from PyQt6.QtCore import QSize, QEventLoop, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
@@ -9,7 +11,7 @@ from Interfaces.SettingInterface import SettingInterface
 from Interfaces.InfoInterface import InfoInterface
 from Interfaces.CMDInterface import CMDInterface
 
-from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen
+from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen, Dialog
 from qfluentwidgets import FluentIcon as FIF
 
 from Interfaces import version
@@ -69,11 +71,18 @@ class MainWindow(FluentWindow):
     def closeEvent(self, event):
         """重写关闭事件"""
 
+        # 检测是否有程序正在运行并弹出对话框
+        if self.cmdInterface.sktClient.running:
+            w = Dialog('文件正在运行', '当前有文件正在运行，关闭应用将强制结束进程，确认继续吗？')
+            if not w.exec():
+                event.ignore()
+                return
+
         # 关闭时保存表格宽度
         fileTableWidth = [self.homeInterface.fileTableView.columnWidth(i) for i in range(5)]
         cfg.set(cfg.tableColumnWidth, fileTableWidth)
 
-        #保存表格内容
+        # 保存表格内容
         self.homeInterface.saveContents()
 
         # 切断与子进程的连接
