@@ -183,7 +183,6 @@ class HomeInterface(QWidget):
         if row is None:
             selectedRanges = self.fileTableView.selectedRanges()
             if selectedRanges:
-                logging.info('运行文件中……')
 
                 # 收集选中的行索引（从大到小排序）
                 selectedRowsIndex = []
@@ -199,7 +198,7 @@ class HomeInterface(QWidget):
                         position=InfoBarPosition.TOP,
                         parent=self.parentWindow
                     )
-                    return  # 提前结束防止运行下面的语句
+                    return  # 多选时不运行文件
                 else:
                     item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
             else:
@@ -210,12 +209,18 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
-                return  # 提前结束防止运行下面的语句
+                return  # 未选择文件时结束方法调用
         else:
             item = self.fileTableView.item(row, 2)
 
         # 运行文件
         if not self.parentWindow.cmdInterface.socketClient.running:
+            # 弹出确认对话框
+            w = Dialog('运行文件', '是否确认运行选中的文件')
+            if not w.exec():
+                return  # 对话框选择取消不运行文件
+
+            logging.info('运行文件中……')
             filePath = item.text()
             if os.path.isfile(filePath):
                 # 在备注中删除“（已失效）”字样
@@ -225,8 +230,8 @@ class HomeInterface(QWidget):
                     self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
 
                 running_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
-                ackCode = running_cnt.receiveData()
-                if ackCode:
+                ack = running_cnt.receiveData()
+                if ack:
                     InfoBar.success(
                         '开始运行',
                         '请前往控制台界面查看运行详情',
@@ -243,7 +248,7 @@ class HomeInterface(QWidget):
                         duration=1500,
                         parent=self.parentWindow
                     )
-                    return
+                    return  # 应答值为假不运行文件
             else:
                 # 在备注中标记“（已失效）”
                 remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
@@ -301,7 +306,7 @@ class HomeInterface(QWidget):
 
             fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
             file_infos = fileAdd_cnt.receiveData()  # [[文件名,修改日期,后缀名,文件大小],...]
-            if file_infos is not None:
+            if file_infos[0] is not None:  # 判断第一个元素是否为空
                 currentRowCount = self.fileTableView.rowCount()
 
                 self.fileTableView.setRowCount(len(files) + currentRowCount)
