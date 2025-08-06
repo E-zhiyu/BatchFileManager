@@ -4,7 +4,7 @@ import queue
 
 from PyQt6.QtCore import pyqtSignal, QObject
 
-from qfluentwidgets import TextBrowser, LineEdit, InfoBar, InfoBarPosition
+from qfluentwidgets import LineEdit, InfoBar, InfoBarPosition, PlainTextEdit
 
 from Logs.log_recorder import logging
 
@@ -12,7 +12,7 @@ from Logs.log_recorder import logging
 class SocketClient(QObject):
     runningChanged = pyqtSignal(bool)
 
-    def __init__(self, parent, userCommandControl: LineEdit, outputControl: TextBrowser, host='localhost', port=8080,
+    def __init__(self, parent, userCommandControl: LineEdit, outputControl: PlainTextEdit, host='localhost', port=8080,
                  *args, **kwargs):
         """
         连接至Java子进程控制台的构造方法
@@ -32,6 +32,7 @@ class SocketClient(QObject):
         self.running = False
         self.autoScroll = True
         self.rcvTimeoutCount = 0  # 接收超时计数器
+        self.dataReceived = False
 
     def setup_socket(self):
         """创建套接字并启动通信线程"""
@@ -125,17 +126,16 @@ class SocketClient(QObject):
     def receive_messages(self):
         """接收线程: 处理服务器消息"""
         while self.running:
+            cursor = self.outputTextBrowser.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)  # 将光标移动至末尾
+            self.outputTextBrowser.setTextCursor(cursor)
             try:
                 data = self.sock.recv(1024).decode('utf-8')
-
-                self.outputTextBrowser.insertPlainText(data)  # 更新GUI
+                cursor.insertText(data)  # 更新GUI（通过光标写入数据）
                 self.rcvTimeoutCount = 0  # 清空接收超时计数器
 
-                # 滚动到底部
+                # 自动滚动到底部（通过强制使光标可见实现）
                 if self.autoScroll:
-                    cursor = self.outputTextBrowser.textCursor()
-                    cursor.movePosition(cursor.MoveOperation.End)  # PyQt6 的枚举值
-                    self.outputTextBrowser.setTextCursor(cursor)
                     self.outputTextBrowser.ensureCursorVisible()
 
                 # 自动检测并关闭进程
@@ -147,7 +147,9 @@ class SocketClient(QObject):
                     self.on_close()
                     break
 
-                self.sock.settimeout(0)  # 成功接收则取消超时
+                if not self.dataReceived:
+                    self.sock.settimeout(0)  # 成功接收则取消超时
+                    self.dataReceived = True
             except ConnectionResetError:
                 self.outputTextBrowser.insertPlainText('【BFM】Java文件运行服务已关闭\n')
                 logging.info('【BFM】Java文件运行服务已关闭')

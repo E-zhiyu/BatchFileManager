@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
 from Connector.SocketClient import SocketClient
-from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox, \
+from qfluentwidgets import BodyLabel, LineEdit, PlainTextEdit, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox, \
     ToolTipFilter, ToolTipPosition
 from qfluentwidgets import FluentIcon as FIF
 
@@ -31,7 +31,7 @@ class CMDInterface(QWidget):
         self.initControls()
 
         # 实例化连接子进程控制台的套接字客户端
-        self.socketClient = SocketClient(self, self.cmdInputLineEdit, self.outputTextBrowser)
+        self.socketClient = SocketClient(self, self.cmdInputLineEdit, self.outputTextEdit)
 
         # 设置控件信号连接
         self.sendCommandButton.clicked.connect(self.socketClient.send_command)
@@ -75,9 +75,10 @@ class CMDInterface(QWidget):
         self.autoScrollCheckBox.checkStateChanged.connect(self.setAutoScroll)
         outputLayout.addWidget(self.autoScrollCheckBox, 0, Qt.AlignmentFlag.AlignRight)
 
-        self.outputTextBrowser = TextBrowser()  # 显示控制台内容的控件
-        self.outputTextBrowser.document().setMaximumBlockCount(1000)  # 限制最大行数
-        self.mainLayout.addWidget(self.outputTextBrowser, 1)
+        self.outputTextEdit = PlainTextEdit()  # 显示控制台内容的控件
+        self.outputTextEdit.setReadOnly(True)  # 设置为只读状态
+        self.outputTextEdit.document().setMaximumBlockCount(1000)  # 限制最大行数
+        self.mainLayout.addWidget(self.outputTextEdit, 1)
 
     def setAutoScroll(self):
         self.socketClient.autoScroll = self.autoScrollCheckBox.isChecked()
@@ -110,4 +111,4 @@ class CMDInterface(QWidget):
 
     def clearOutput(self):
         """清空命令输出的内容"""
-        self.outputTextBrowser.clear()
+        self.outputTextEdit.clear()
