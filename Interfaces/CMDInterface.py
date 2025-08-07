@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
 from Connector.SocketClient import SocketClient
-from qfluentwidgets import BodyLabel, LineEdit, TextBrowser, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox, \
+from qfluentwidgets import BodyLabel, LineEdit, PlainTextEdit, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox, \
     ToolTipFilter, ToolTipPosition
 from qfluentwidgets import FluentIcon as FIF
 
@@ -31,11 +31,11 @@ class CMDInterface(QWidget):
         self.initControls()
 
         # 实例化连接子进程控制台的套接字客户端
-        self.sktClient = SocketClient(self, self.runCommandLineEdit, self.outputTextBrowser)
+        self.socketClient = SocketClient(self, self.cmdInputLineEdit, self.outputTextEdit)
 
         # 设置控件信号连接
-        self.sendCommandButton.clicked.connect(self.sktClient.send_command)
-        self.runCommandLineEdit.returnPressed.connect(self.sktClient.send_command)
+        self.sendCommandButton.clicked.connect(self.socketClient.send_command)
+        self.cmdInputLineEdit.returnPressed.connect(self.socketClient.send_command)
 
     def initControls(self):
         """初始化控件"""
@@ -46,9 +46,9 @@ class CMDInterface(QWidget):
         runCommandLayout = QHBoxLayout()
         self.mainLayout.addLayout(runCommandLayout)
 
-        self.runCommandLineEdit = LineEdit()  # 命令输入框
-        self.runCommandLineEdit.setPlaceholderText('输入待运行的命令')
-        runCommandLayout.addWidget(self.runCommandLineEdit, 1, )
+        self.cmdInputLineEdit = LineEdit()  # 命令输入框
+        self.cmdInputLineEdit.setPlaceholderText('输入待运行的命令')
+        runCommandLayout.addWidget(self.cmdInputLineEdit, 1, )
 
         self.sendCommandButton = PushButton(text='发送命令', icon=FIF.SEND)
         self.sendCommandButton.setToolTip('将命令发送至后台(Enter)')
@@ -75,17 +75,18 @@ class CMDInterface(QWidget):
         self.autoScrollCheckBox.checkStateChanged.connect(self.setAutoScroll)
         outputLayout.addWidget(self.autoScrollCheckBox, 0, Qt.AlignmentFlag.AlignRight)
 
-        self.outputTextBrowser = TextBrowser()  # 显示控制台内容的控件
-        self.outputTextBrowser.document().setMaximumBlockCount(1000)  # 限制最大行数
-        self.mainLayout.addWidget(self.outputTextBrowser, 1)
+        self.outputTextEdit = PlainTextEdit()  # 显示控制台内容的控件
+        self.outputTextEdit.setReadOnly(True)  # 设置为只读状态
+        self.outputTextEdit.document().setMaximumBlockCount(1000)  # 限制最大行数
+        self.mainLayout.addWidget(self.outputTextEdit, 1)
 
     def setAutoScroll(self):
-        self.sktClient.autoScroll = self.autoScrollCheckBox.isChecked()
+        self.socketClient.autoScroll = self.autoScrollCheckBox.isChecked()
 
     def startCommunication(self):
         """启动与Java子进程的通信"""
         self.clearOutput()
-        self.sktClient.setup_socket()
+        self.socketClient.setup_socket()
 
     def stopCommunicationAndKill(self, withMessageBox: bool = False):
         """
@@ -93,12 +94,12 @@ class CMDInterface(QWidget):
         :param withMessageBox:是否弹出确认框
         """
         if not withMessageBox:
-            self.sktClient.send_command('#kill#')
+            self.socketClient.send_command('#kill#')
         else:
-            if self.sktClient.running:
-                w = Dialog('结束进程', '确认要结束进程吗？这可能导致不可逆的后果', self.parentWindow)
+            if self.socketClient.running:
+                w = Dialog('结束进程', '确认要结束进程吗？这可能导致进程无法正常关闭', self.parentWindow)
                 if w.exec():
-                    self.sktClient.send_command('#kill#')
+                    self.socketClient.send_command('#kill#')
             else:
                 InfoBar.error(
                     "错误",
@@ -110,4 +111,4 @@ class CMDInterface(QWidget):
 
     def clearOutput(self):
         """清空命令输出的内容"""
-        self.outputTextBrowser.clear()
+        self.outputTextEdit.clear()

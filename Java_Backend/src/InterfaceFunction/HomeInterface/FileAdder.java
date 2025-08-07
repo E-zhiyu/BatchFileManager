@@ -17,7 +17,7 @@ import PythonConnector.GrandProcessConnector;
 
 public class FileAdder implements GrandProcessConnector<List<String>, List<List<String>>> {
     static List<String> filePaths;
-    static List<List<String>> fileInfos;
+    static List<List<String>> allFileInfos;
 
     /**
      * 从标准输入接收文件路径列表
@@ -32,16 +32,16 @@ public class FileAdder implements GrandProcessConnector<List<String>, List<List<
 
         try {
             String jsonInput = reader.readLine();  // 读取一行JSON数据
-
-            // 解析JSON
-            JSONArray jsonArray = new JSONArray(jsonInput);
+            JSONArray jsonArray = new JSONArray(jsonInput);  // 解析JSON
 
             // 转换为Java List
             for (int i = 0; i < jsonArray.length(); i++) {
                 allFilePaths.add(String.valueOf(jsonArray.get(i)));
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException e) {  //读取标准输入时的异常处理
+            List<String> l = new ArrayList<>();  //发送空的列表
+            JSONArray jsonArray = new JSONArray(l);
+            System.out.println(jsonArray);
         }
 
         return allFilePaths;
@@ -71,28 +71,22 @@ public class FileAdder implements GrandProcessConnector<List<String>, List<List<
         for (String onePath : filePaths) {
             Path path = Paths.get(onePath);
 
-            //获取文件名（带后缀）
-            String fileName = path.getFileName().toString();
 
-            //获取修改日期
-            BasicFileAttributes attrs = null;
-            String date = "未知";
+            String fileName = path.getFileName().toString();  //获取文件名（带后缀）
+            String date = null;
+            String extension = fileName.substring(fileName.lastIndexOf(".") + 1);  //获取后缀名
+            String fileSize = null;
+
             try {
-                attrs = Files.readAttributes(path, BasicFileAttributes.class);
+                BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);  //获取文件属性对象
+
+                //获取修改日期
                 long lastModified = attrs.lastModifiedTime().toMillis();
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 date = sdf.format(new Date(lastModified));
-            } catch (IOException _) {
-            }
 
-            //获取后缀名
-            String extension = fileName.substring(fileName.lastIndexOf(".") + 1);
-
-            //获取文件大小
-            String fileSize = "未知";
-            if (attrs != null) {
+                //获取文件大小
                 long size = attrs.size();
-
                 if (size < 1024) {
                     fileSize = size + "B";
                 } else if (size < 1024 * 1024) {
@@ -102,15 +96,18 @@ public class FileAdder implements GrandProcessConnector<List<String>, List<List<
                 } else {
                     fileSize = size + "GB";
                 }
+            } catch (IOException e) {
+                date = "未知";
+                fileSize = "未知";
+            } finally {
+                //将文件信息打包
+                List<String> oneFileInfos = new ArrayList<>();
+                oneFileInfos.add(fileName);
+                oneFileInfos.add(date);
+                oneFileInfos.add(extension);
+                oneFileInfos.add(fileSize);
+                allFileInfos.add(oneFileInfos);
             }
-
-            //将文件信息打包
-            List<String> oneFileInfos = new ArrayList<>();
-            oneFileInfos.add(fileName);
-            oneFileInfos.add(date);
-            oneFileInfos.add(extension);
-            oneFileInfos.add(fileSize);
-            allFileInfos.add(oneFileInfos);
         }
 
         return allFileInfos;
@@ -119,7 +116,9 @@ public class FileAdder implements GrandProcessConnector<List<String>, List<List<
     public static void main(String[] args) {
         FileAdder fileAdder = new FileAdder();
         filePaths = fileAdder.receiveData();
-        fileInfos = fileAdder.getFileInfos(filePaths);
-        fileAdder.sendData(fileInfos);
+        if (!filePaths.isEmpty()) {
+            allFileInfos = fileAdder.getFileInfos(filePaths);
+            fileAdder.sendData(allFileInfos);
+        }
     }
 }

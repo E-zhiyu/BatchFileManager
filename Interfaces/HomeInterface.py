@@ -3,7 +3,7 @@ import json
 import os
 
 from PyQt6.QtCore import Qt, QPoint, QTimer
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog, QTableWidget
 
 from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog, ToolTipFilter, ToolTipPosition, \
     RoundMenu, Action, MessageBoxBase, SubtitleLabel, LineEdit
@@ -12,6 +12,24 @@ from qfluentwidgets import FluentIcon as FIF
 from AppConfig.config import cfg
 from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
+
+
+class FileTabel(TableWidget):
+    """文件列表类"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setEditTriggers(
+            QTableWidget.EditTrigger.DoubleClicked |  # 双击
+            QTableWidget.EditTrigger.EditKeyPressed  # 按F2键
+        )
+
+    def setItem(self, row, column, item):
+        if column != 1:
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # 如果列下标不为1则不可编辑
+
+        super().setItem(row, column, item)
 
 
 class RemarkModifyDialog(MessageBoxBase):
@@ -96,7 +114,7 @@ class HomeInterface(QWidget):
         self.openFolderButton.clicked.connect(lambda: self.openFolderAction())
 
         # 文件表格视图
-        self.fileTableView = TableWidget(self)
+        self.fileTableView = FileTabel(self)
         self.mainLayout.addWidget(self.fileTableView)
 
         self.fileTableView.setBorderVisible(True)  # 设置边界可见性
@@ -183,7 +201,6 @@ class HomeInterface(QWidget):
         if row is None:
             selectedRanges = self.fileTableView.selectedRanges()
             if selectedRanges:
-                logging.info('运行文件中……')
 
                 # 收集选中的行索引（从大到小排序）
                 selectedRowsIndex = []
@@ -199,7 +216,7 @@ class HomeInterface(QWidget):
                         position=InfoBarPosition.TOP,
                         parent=self.parentWindow
                     )
-                    return  # 提前结束防止运行下面的语句
+                    return  # 多选时不运行文件
                 else:
                     item = self.fileTableView.item(self.fileTableView.currentRow(), 2)  # 获取保存文件路径的元素
             else:
@@ -210,12 +227,18 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
-                return  # 提前结束防止运行下面的语句
+                return  # 未选择文件时结束方法调用
         else:
             item = self.fileTableView.item(row, 2)
 
         # 运行文件
-        if not self.parentWindow.cmdInterface.sktClient.running:
+        if not self.parentWindow.cmdInterface.socketClient.running:
+            # 弹出确认对话框
+            w = Dialog('运行文件', '是否确认运行选中的文件')
+            if not w.exec():
+                return  # 对话框选择取消不运行文件
+
+            logging.info('运行文件中……')
             filePath = item.text()
             if os.path.isfile(filePath):
                 # 在备注中删除“（已失效）”字样
@@ -224,17 +247,26 @@ class HomeInterface(QWidget):
                     remark = remark.lstrip('（已失效）')
                     self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
 
-                JarConnector('./backend/fileRunner.jar', [filePath])
-                self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
-
-                InfoBar.success(
-                    '开始运行',
-                    '请前往控制台界面查看运行详情',
-                    position=InfoBarPosition.TOP,
-                    duration=1500,
-                    parent=self.parentWindow
-                )
-                logging.info('文件成功运行')
+                running_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
+                ack = running_cnt.receiveData()
+                if ack:
+                    InfoBar.success(
+                        '开始运行',
+                        '请前往控制台界面查看运行详情',
+                        position=InfoBarPosition.TOP,
+                        duration=1500,
+                        parent=self.parentWindow
+                    )
+                    self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
+                else:
+                    InfoBar.error(
+                        "运行失败",
+                        "由于未知原因文件无法运行",
+                        position=InfoBarPosition.TOP,
+                        duration=1500,
+                        parent=self.parentWindow
+                    )
+                    return  # 应答值为假不运行文件
             else:
                 # 在备注中标记“（已失效）”
                 remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
@@ -292,7 +324,7 @@ class HomeInterface(QWidget):
 
             fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
             file_infos = fileAdd_cnt.receiveData()  # [[文件名,修改日期,后缀名,文件大小],...]
-            if file_infos is not None:
+            if file_infos[0] is not None:  # 判断第一个元素是否为空
                 currentRowCount = self.fileTableView.rowCount()
 
                 self.fileTableView.setRowCount(len(files) + currentRowCount)
