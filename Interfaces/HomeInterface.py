@@ -32,32 +32,6 @@ class FileTabel(TableWidget):
         super().setItem(row, column, item)
 
 
-class RemarkModifyDialog(MessageBoxBase):
-    """修改备注的窗口类"""
-
-    def __init__(self, origin_remark, parent=None):
-        """
-        备注修改窗口
-        :param origin_remark:修改前的备注
-        :param parent:待遮罩的窗口（推荐设置为主窗口）
-        """
-        super().__init__(parent)
-        self.widget.setMinimumWidth(350)  # 设置最小窗口宽度
-
-        titleLabel = SubtitleLabel('修改备注')
-        self.viewLayout.addWidget(titleLabel)
-
-        self.remarkLineEdit = LineEdit()
-        self.remarkLineEdit.setPlaceholderText('请输入备注（可留空）')
-        self.remarkLineEdit.setText(origin_remark)
-        QTimer.singleShot(100, self.remarkLineEdit.setFocus)  # 界面完全刷新后设置为焦点
-        self.remarkLineEdit.returnPressed.connect(self._MessageBoxBase__onYesButtonClicked)  # 按下回车确认修改
-        self.viewLayout.addWidget(self.remarkLineEdit)
-
-        self.yesButton.setText('确认')
-        self.cancelButton.setText('取消')
-
-
 class HomeInterface(QWidget):
     """主页类"""
 
@@ -126,6 +100,7 @@ class HomeInterface(QWidget):
 
         self.fileTableView.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # 将表格的上下文菜单策略设置为 自定义模式
         self.fileTableView.customContextMenuRequested.connect(self.showContextMenu)  # 绑定显示右键菜单的方法
+        self.fileTableView.itemChanged.connect(self.saveContents)  # 编辑内容后执行保存方法
 
         # 恢复软件关闭前的列宽
         columnWidthList = cfg.get(cfg.tableColumnWidth)
@@ -299,15 +274,7 @@ class HomeInterface(QWidget):
         :param row:选中的单个行下标
         """
 
-        # 获取原本的备注
-        origin_remark = self.fileTableView.item(row, 1).text()
-
-        # 显示备注修改窗口
-        w = RemarkModifyDialog(origin_remark, self.parentWindow)
-        if w.exec():
-            new_remark = w.remarkLineEdit.text()
-            self.fileTableView.setItem(row, 1, QTableWidgetItem(new_remark))
-            self.saveContents()
+        self.fileTableView.editItem(self.fileTableView.item(row, 1))
 
     def addFileAction(self):
         """添加文件行为"""
@@ -529,8 +496,10 @@ class HomeInterface(QWidget):
                 self.fileTableView.setRowCount(len(allRows))
 
                 # 依次添加文件信息
+                self.fileTableView.blockSignals(True)  # 阻断信号防止加载过程中保存表格信息
                 for i, row in enumerate(allRows):
                     for j, column in enumerate(row):
                         self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+                self.fileTableView.blockSignals(False)
         except FileNotFoundError:
             pass
