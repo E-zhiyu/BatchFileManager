@@ -3,7 +3,7 @@ import json
 import os
 
 from PyQt6.QtCore import Qt, QPoint, QTimer
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QHeaderView, QTableWidgetItem, QFileDialog, QTableWidget
 
 from qfluentwidgets import PushButton, TableWidget, InfoBar, InfoBarPosition, Dialog, ToolTipFilter, ToolTipPosition, \
     RoundMenu, Action, MessageBoxBase, SubtitleLabel, LineEdit
@@ -12,6 +12,24 @@ from qfluentwidgets import FluentIcon as FIF
 from AppConfig.config import cfg
 from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
+
+
+class FileTabel(TableWidget):
+    """文件列表类"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setEditTriggers(
+            QTableWidget.EditTrigger.DoubleClicked |  # 双击
+            QTableWidget.EditTrigger.EditKeyPressed  # 按F2键
+        )
+
+    def setItem(self, row, column, item):
+        if column != 1:
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # 如果列下标不为1则不可编辑
+
+        super().setItem(row, column, item)
 
 
 class RemarkModifyDialog(MessageBoxBase):
@@ -96,7 +114,7 @@ class HomeInterface(QWidget):
         self.openFolderButton.clicked.connect(lambda: self.openFolderAction())
 
         # 文件表格视图
-        self.fileTableView = TableWidget(self)
+        self.fileTableView = FileTabel(self)
         self.mainLayout.addWidget(self.fileTableView)
 
         self.fileTableView.setBorderVisible(True)  # 设置边界可见性
