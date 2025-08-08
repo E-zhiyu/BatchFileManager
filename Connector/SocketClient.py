@@ -13,7 +13,7 @@ from Logs.log_recorder import logging
 class SocketClient(QObject):
     runningChanged = pyqtSignal(bool)
 
-    def __init__(self, parent, userCommandControl: LineEdit, outputControl: PlainTextEdit, host='localhost', port=8080,
+    def __init__(self, parent, userCommandControl: LineEdit, outputControl: PlainTextEdit, host='localhost', port=1918,
                  *args, **kwargs):
         """
         连接至Java子进程控制台的构造方法
@@ -171,8 +171,8 @@ class SocketClient(QObject):
                 else:
                     self.outputTextEdit.insertPlainText('【BFM】超时次数过多，文件运行进程已终止\n')
                     self.outputTextEdit.insertPlainText(
-                        '【BFM】提示：使用netstat -ano | findstr \"8080\"以查询端口占用情况\n')
-                    logging.error('【BFM】超时次数过多，文件运行进程已终止，请检查8080端口占用情况')
+                        '【BFM】提示：使用netstat -ano | findstr \"1918\"以查询端口占用情况\n')
+                    logging.error('【BFM】超时次数过多，文件运行进程已终止，请检查1918端口占用情况')
                     self.on_close()
                     break
             except socket.error as e:
