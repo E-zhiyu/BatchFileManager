@@ -2,6 +2,8 @@
 import json
 import subprocess
 
+from Logs.log_recorder import logging
+
 
 class JarConnector:
     """
@@ -23,6 +25,7 @@ class JarConnector:
             stderr=subprocess.PIPE,
             text=True
         )
+        logging.info(f"JarConnector成功创建子进程，目标：{self.target}")
 
         self.__sendData()
 
@@ -33,11 +36,15 @@ class JarConnector:
         self.java_process.stdin.write(json_data + '\n')  # 添加换行符作为结束标记
         self.java_process.stdin.flush()  # 确保数据被发送
         self.java_process.stdin.close()
+        logging.info('JarConnector成功发送数据')
 
     def receiveData(self):
         """从Java子进程读取标准输出中的数据"""
+        logging.info('JarConnector尝试接收数据')
         json_data = self.java_process.stdout.readline()
         try:
+            logging.info('JarConnector成功接收数据')
             return json.loads(json_data)
         except json.decoder.JSONDecodeError:
+            logging.warning('JarConnector接收数据失败')
             return None

@@ -7,6 +7,8 @@ from qfluentwidgets import BodyLabel, LineEdit, PlainTextEdit, PushButton, Dialo
     ToolTipFilter, ToolTipPosition
 from qfluentwidgets import FluentIcon as FIF
 
+from Logs.log_recorder import logging
+
 
 class CMDInterface(QWidget):
     """图形化控制台界面类"""
@@ -81,10 +83,13 @@ class CMDInterface(QWidget):
         self.mainLayout.addWidget(self.outputTextEdit, 1)
 
     def setAutoScroll(self):
-        self.socketClient.autoScroll = self.autoScrollCheckBox.isChecked()
+        flag = self.autoScrollCheckBox.isChecked()
+        logging.info(f'切换自动滚动：{flag}')
+        self.socketClient.autoScroll = flag
 
     def startCommunication(self):
         """启动与Java子进程的通信"""
+        logging.info('启动控制台通信')
         self.clearOutput()
         self.socketClient.setup_socket()
 

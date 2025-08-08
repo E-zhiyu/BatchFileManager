@@ -273,7 +273,7 @@ class HomeInterface(QWidget):
         编辑文件备注
         :param row:选中的单个行下标
         """
-
+        logging.info('编辑备注')
         self.fileTableView.editItem(self.fileTableView.item(row, 1))
 
     def addFileAction(self):
@@ -339,8 +339,6 @@ class HomeInterface(QWidget):
             if selectedRanges:
                 w = Dialog('删除文件', '确认从列表中删除选中的文件吗？（此操作不会删除硬盘上的文件）', self.parentWindow)
                 if w.exec():
-                    logging.info('开始删除文件……')
-
                     # 收集所有要删除的行索引（从大到小排序）
                     rowsToDelete = set()
                     for range_obj in selectedRanges:

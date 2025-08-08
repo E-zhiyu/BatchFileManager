@@ -136,7 +136,7 @@ class SocketClient(QObject):
                 break
 
     def receive_messages(self):
-        """接收线程: 处理服务器消息"""
+        """接收线程：将消息存放至队列"""
         while self.running:
             try:
                 data = self.sock.recv(1024).decode('utf-8')  # 解码接收到的数据
@@ -207,3 +207,4 @@ class SocketClient(QObject):
         self.timer.stop()  # 关闭定时器
         if hasattr(self, 'sock'):
             self.sock.close()
+        logging.info('已切断与Java进程的通信')
