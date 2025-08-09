@@ -67,7 +67,7 @@ public class fileRunner implements GrandProcessConnector<String, Boolean> {
         int exitCode = -1;
 
         //创建与主进程（客户端）的连接
-        try (ServerSocket serverSocket = new ServerSocket(1918);) {
+        try (ServerSocket serverSocket = new ServerSocket(1918)) {
             Socket clientSocket = serverSocket.accept();
             PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
             BufferedReader in = new BufferedReader(
