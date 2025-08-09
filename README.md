@@ -18,16 +18,19 @@
 
 ## 下载与使用
 
-1. 安装OpenJDK 24（软件部分功能依靠.jar文件）
-2. 从Release下载最新版软件压缩包并解压到任意位置
-3. 运行解压得到的BatchFileManager.exe
+1. 下载OpenJDK 24
+2. 从Release下载最新版软件压缩包
+3. （可选）将OpenJDK 24（或更新的版本）的安装路径添加至环境变量
+4. 解压下载的软件压缩包，运行解压得到的BatchFileManager.exe
+5. 在软件的设置界面将Java路径设置为OpenJDK 24的安装路径（如果没有设置环境变量）
 
 ## 构建项目
 
 1. 克隆本仓库或直接下载源代码压缩包
-2. 依次以Java_Backend\src\InterfaceFunction中的类为主类构建为同名.jar文件
-3. 在源码根目录（即Main.py所在目录）新建backend文件夹，将构建好的.jar文件移动至该文件夹
-4. 运行Main.py
+2. 安装OpenJDK 24或更新的版本
+3. 依次以Java_Backend\src\InterfaceFunction中的类为主类构建为同名.jar文件
+4. 在源码根目录（即Main.py所在目录）新建backend文件夹，将构建好的.jar文件移动至该文件夹
+5. 运行Main.py
 
 ## 使用到的其他开源项目
 
