@@ -2,6 +2,12 @@
 
 这是一款能够便捷管理本地批处理文件的应用
 
+## 效果展示
+
+<img width="1388" height="1037" alt="PixPin_2025-08-05_12-47-27" src="https://github.com/user-attachments/assets/3c7546c0-de30-4dc9-9f61-04cc73704081" />
+<img width="1388" height="1037" alt="PixPin_2025-08-05_12-50-22" src="https://github.com/user-attachments/assets/c2c25c4e-bab2-4b37-a453-0fd43176a8a1" />
+
+
 ## 主要特性
 
 - 集中管理批处理或命令脚本文件
