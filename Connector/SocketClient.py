@@ -50,8 +50,8 @@ class SocketClient(QObject):
             self.running = True
             self.runningChanged.emit(True)
         except ConnectionRefusedError:
-            self.outputTextEdit.insertPlainText("【BFM】错误: 端口8080被占用，无法连接至服务器\n")
-            logging.error('【BFM】错误: 端口8080被占用，无法连接至服务器')
+            self.outputTextEdit.insertPlainText("【BFM】错误: 端口1918被占用，无法连接至服务器\n")
+            logging.error('【BFM】错误: 端口1918被占用，无法连接至服务器')
             self.on_close()
         except socket.timeout:
             self.outputTextEdit.insertPlainText('【BFM】错误：连接子进程超时\n')

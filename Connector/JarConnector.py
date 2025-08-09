@@ -2,6 +2,7 @@
 import json
 import subprocess
 
+from AppConfig.config import cfg
 from Logs.log_recorder import logging
 
 
@@ -15,10 +16,11 @@ class JarConnector:
     def __init__(self, target: str, sent_data: (list, dict, set)):
         self.target = target  # 目标.jar文件路径
         self.sent_data = sent_data  # 需要发送的数据
+        self.java_path = cfg.get(cfg.javaPath)
 
         # 启动Java进程
         self.java_process = subprocess.Popen(
-            ["java", '-jar', self.target],
+            [self.java_path if self.java_path else "java", '-jar', self.target],
             creationflags=subprocess.CREATE_NO_WINDOW,  # 关键参数，不显示窗口
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,

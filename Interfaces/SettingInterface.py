@@ -1,9 +1,11 @@
 """设置界面模块"""
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog
 
 from qfluentwidgets import (ScrollArea, SettingCardGroup, OptionsSettingCard, QConfig, FluentIcon,
-                            CustomColorSettingCard, ExpandLayout)
+                            CustomColorSettingCard, ExpandLayout, PushSettingCard)
+
+from AppConfig.config import cfg
 
 
 class SettingInterface(QWidget):
@@ -60,3 +62,31 @@ class SettingInterface(QWidget):
             parent=self.personalizationGroup
         )
         self.personalizationGroup.addSettingCard(self.themeColorCard)
+
+        """运行环境项"""
+        self.environmentGroup = SettingCardGroup("运行环境", self.scrollWidget)
+        self.viewLayout.addWidget(self.environmentGroup)
+
+        # 修改Java路径
+        javaPath = cfg.get(cfg.javaPath)
+        self.javaPathCard = PushSettingCard(
+            text='选择Java',
+            icon=FluentIcon.CAFE,
+            title='Java路径',
+            content=javaPath if javaPath is not None else "由系统确定Java路径"
+        )
+        self.environmentGroup.addSettingCard(self.javaPathCard)
+        self.javaPathCard.clicked.connect(self.editJavaPath)
+
+    def editJavaPath(self):
+        """选择Java路径"""
+        java = QFileDialog.getOpenFileName(
+            None,
+            '选择Java',
+            "",
+            "Java应用程序 (java.exe)"
+        )[0]
+
+        if java:
+            cfg.set(cfg.javaPath, java)
+            self.javaPathCard.setContent(java)
