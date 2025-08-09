@@ -232,15 +232,17 @@ class HomeInterface(QWidget):
                         duration=1500,
                         parent=self.parentWindow
                     )
+                    logging.info('文件已开始运行')
                     self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
                 else:
                     InfoBar.error(
                         "运行失败",
-                        "由于未知原因文件无法运行",
+                        "Java后端运行异常，请检查Java版本",
                         position=InfoBarPosition.TOP,
                         duration=1500,
                         parent=self.parentWindow
                     )
+                    logging.error('运行失败：Java后端运行异常')
                     return  # 应答值为假不运行文件
             else:
                 # 在备注中标记“（已失效）”
@@ -258,6 +260,7 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                logging.error('运行失败：文件不存在')
         else:
             InfoBar.error(
                 '运行失败',

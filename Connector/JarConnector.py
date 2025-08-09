@@ -45,8 +45,9 @@ class JarConnector:
         logging.info('JarConnector尝试接收数据')
         json_data = self.java_process.stdout.readline()
         try:
+            data = json.loads(json_data)
             logging.info('JarConnector成功接收数据')
-            return json.loads(json_data)
+            return data
         except json.decoder.JSONDecodeError:
             logging.warning('JarConnector接收数据失败')
             return None
