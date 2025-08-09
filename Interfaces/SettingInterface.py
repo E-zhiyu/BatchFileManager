@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QHBoxLayout, QBut
 
 from qfluentwidgets import (ScrollArea, SettingCardGroup, OptionsSettingCard, QConfig, FluentIcon, RadioButton,
                             CustomColorSettingCard, ExpandLayout, PushSettingCard, ExpandGroupSettingCard, LineEdit,
-                            ToolButton)
+                            ToolButton, InfoBar, InfoBarPosition)
 
 from AppConfig.config import cfg
 
@@ -15,6 +15,7 @@ class JavaPathCard(ExpandGroupSettingCard):
     """Java路径设置卡"""
 
     def __init__(self, parent=None):
+        self.parentWindow = parent
         javaPath = cfg.get(cfg.customJavaPath)
         super().__init__(FluentIcon.CAFE, 'Java路径', javaPath if javaPath else '由环境变量决定', parent)
 
@@ -51,7 +52,8 @@ class JavaPathCard(ExpandGroupSettingCard):
         self.add(sysRadioBtn)
         self.add(customRadioBtn, customWidget)
 
-        self.__loadStatus()  # 加载配置并设置控件状态
+        # 加载配置并设置控件状态
+        self.__loadStatus()
 
     def add(self, lControl, rWidget=None):
         """
@@ -73,6 +75,39 @@ class JavaPathCard(ExpandGroupSettingCard):
 
         self.addGroupWidget(w)  # 将组合后的容器添加到卡片布局中
 
+    def verifyJavaPath(self, path: str):
+        """
+        验证自定义Java路径并修改配置项
+        :param path: 需要验证的Java路径
+        :return:通过-True，不通过-False
+        """
+
+        path = path.strip('\"')
+
+        if os.path.isfile(path):
+            cfg.set(cfg.customJavaPath, path)
+            cfg.set(cfg.useCustomJavaPath, True)
+            self.card.setContent(path)
+            InfoBar.success(
+                '成功',
+                '成功设置Java路径',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            return True
+        else:
+            cfg.set(cfg.useCustomJavaPath, False)
+            self.card.setContent('Java路径错误')
+            InfoBar.error(
+                '错误',
+                'Java路径错误',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            return False
+
     def __onIdClicked(self, btn_id):
         """
         单选按钮按下后的响应方法
@@ -80,49 +115,52 @@ class JavaPathCard(ExpandGroupSettingCard):
         """
 
         if btn_id == 0:
-            cfg.set(cfg.useCustomJavaPath,False)
+            cfg.set(cfg.useCustomJavaPath, False)
             self.card.setContent('由环境变量决定')
 
             self.pathLineEdit.setEnabled(False)
             self.pathBtn.setEnabled(False)
+            InfoBar.success(
+                '成功',
+                'Java路径遵从环境变量',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
         elif btn_id == 1:
             self.pathLineEdit.setEnabled(True)
             self.pathBtn.setEnabled(True)
 
             customJavaPath = self.pathLineEdit.text().strip('\"')
-            if os.path.isfile(customJavaPath):
-                cfg.set(cfg.useCustomJavaPath, True)
-                cfg.set(cfg.customJavaPath, customJavaPath)
-                self.card.setContent(customJavaPath)
-            else:
-                cfg.set(cfg.useCustomJavaPath, False)
-                self.card.setContent('Java路径错误')
+            self.verifyJavaPath(customJavaPath)
 
     def __onPathBtnClicked(self):
         """路径按钮按下后的响应方法"""
+        currentPath = self.pathLineEdit.text().strip('\"')
+        if os.path.isfile(currentPath):
+            path = currentPath
+        else:
+            path = ''
+
         java_path = QFileDialog.getOpenFileName(
             None,
             '选择Java',
-            "",
+            path,
             "Java应用程序 (java.exe)"
         )[0]
-        self.pathLineEdit.setText(java_path)
-        self.pathLineEdit.setCursorPosition(0)  # 设置光标位置以从头部显示路径
 
-        if java_path and os.path.isfile(java_path):
-            cfg.set(cfg.customJavaPath, java_path)
-            self.card.setContent(java_path)
-        else:
-            self.card.setContent('Java路径错误')
+        if java_path:
+            self.pathLineEdit.blockSignals(True)
+            self.pathLineEdit.setText(java_path)
+            self.pathLineEdit.setCursorPosition(0)  # 设置光标位置以从头部显示路径
+            self.pathLineEdit.blockSignals(False)
+
+            self.verifyJavaPath(java_path)
 
     def __onTextChanged(self):
         """路径输入框文本改变的响应方法"""
         java_path = self.pathLineEdit.text().strip('\"')
-        if os.path.isfile(java_path):
-            cfg.set(cfg.customJavaPath, java_path)
-            self.card.setContent(java_path)
-        else:
-            self.card.setContent('Java路径错误')
+        self.verifyJavaPath(java_path)
 
     def __loadStatus(self):
         """加载配置文件内容并设置控件状态"""
@@ -132,11 +170,13 @@ class JavaPathCard(ExpandGroupSettingCard):
         self.pathLineEdit.setCursorPosition(0)  # 设置光标位置以从头部显示路径
 
         if cfg.get(cfg.useCustomJavaPath):
+            self.card.setContent(cfg.get(cfg.customJavaPath))
             btn = self.buttonGroup.button(1)
             btn.setChecked(True)
             self.pathLineEdit.setEnabled(True)
             self.pathBtn.setEnabled(True)
         else:
+            self.card.setContent('由环境变量决定')
             btn = self.buttonGroup.button(0)
             btn.setChecked(True)
             self.pathLineEdit.setEnabled(False)
