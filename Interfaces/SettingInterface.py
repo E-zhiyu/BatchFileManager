@@ -5,13 +5,14 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QHBoxLayout, QButtonGroup
 
 from qfluentwidgets import (ScrollArea, SettingCardGroup, OptionsSettingCard, QConfig, FluentIcon, RadioButton,
-                            CustomColorSettingCard, ExpandLayout, PushSettingCard, ExpandGroupSettingCard, LineEdit,
-                            ToolButton, InfoBar, InfoBarPosition)
+                            CustomColorSettingCard, ExpandLayout, LineEdit,
+                            ToolButton, InfoBar, InfoBarPosition, ToolTipFilter, ToolTipPosition,
+                            SimpleExpandGroupSettingCard)
 
 from AppConfig.config import cfg
 
 
-class JavaPathCard(ExpandGroupSettingCard):
+class JavaPathCard(SimpleExpandGroupSettingCard):
     """Java路径设置卡"""
 
     def __init__(self, parent=None):
@@ -21,7 +22,12 @@ class JavaPathCard(ExpandGroupSettingCard):
 
         # 创建单选按钮实例
         sysRadioBtn = RadioButton('由环境变量决定')
+        sysRadioBtn.setToolTip('使用环境变量中的Java路径')
+        sysRadioBtn.installEventFilter(ToolTipFilter(sysRadioBtn, position=ToolTipPosition.TOP))
+
         customRadioBtn = RadioButton('自定义')
+        customRadioBtn.setToolTip('使用自定义的Java路径')
+        customRadioBtn.installEventFilter(ToolTipFilter(customRadioBtn, position=ToolTipPosition.TOP))
 
         self.buttonGroup = QButtonGroup()
         self.buttonGroup.addButton(sysRadioBtn, 0)
@@ -46,6 +52,8 @@ class JavaPathCard(ExpandGroupSettingCard):
         self.pathBtn = ToolButton(FluentIcon.FOLDER)
         self.pathBtn.setFixedHeight(35)
         self.pathBtn.clicked.connect(self.__onPathBtnClicked)
+        self.pathBtn.setToolTip('选择Java.exe的路径')
+        self.pathBtn.installEventFilter(ToolTipFilter(self.pathBtn, position=ToolTipPosition.TOP))
         customLayout.addWidget(self.pathBtn)
 
         # 将各组合添加至设置卡片
