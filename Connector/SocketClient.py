@@ -45,8 +45,8 @@ class SocketClient(QObject):
         self.sock.settimeout(3.0)
         try:
             self.sock.connect((self.host, self.port))
-            self.outputTextEdit.insertPlainText("【BFM】已连接到Java文件运行进程\n")
-            logging.info("【BFM】已连接到Java文件运行进程")
+            self.outputTextEdit.insertPlainText("【BFM】开始与Java文件运行进程通信\n")
+            logging.info("【BFM】开始与Java文件运行进程通信")
             self.running = True
             self.runningChanged.emit(True)
         except ConnectionRefusedError:
