@@ -97,7 +97,7 @@ class HomeInterface(QWidget):
         self.fileTableView.setColumnCount(6)  # 设置列数
         self.fileTableView.verticalHeader().hide()  # 隐藏行序号
         self.fileTableView.setHorizontalHeaderLabels(['文件名', '备注', '文件路径', '修改日期', '文件类型', '大小'])
-        # self.fileTableView.setSortingEnabled(True)  # 启用表头排序
+        self.fileTableView.setSortingEnabled(True)  # 启用表头排序
 
         self.fileTableView.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # 将表格的上下文菜单策略设置为 自定义模式
         self.fileTableView.customContextMenuRequested.connect(self.showContextMenu)  # 绑定显示右键菜单的方法
