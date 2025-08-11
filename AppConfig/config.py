@@ -2,12 +2,16 @@
 
 from qfluentwidgets import (qconfig, QConfig, ConfigItem, BoolValidator)
 
+from Interfaces import version
+
 
 class Config(QConfig):
     """应用配置项"""
     tableColumnWidth = ConfigItem('FileTableView', 'ColumnWidth', None)  # 文件列表列宽
     customJavaPath = ConfigItem('Environment', 'CustomJavaPath', '')  # Java路径选项
     useCustomJavaPath = ConfigItem('Environment', 'UseCustomJavaPath', False, BoolValidator())
+
+    appVersion = ConfigItem('AppVersion', 'Version', '')  # 保存应用版本号
 
 
 config_path = './config/app_config.json'
