@@ -82,6 +82,8 @@ class MainWindow(FluentWindow):
     def closeEvent(self, event):
         """重写关闭事件"""
 
+        cfg.set(cfg.appVersion, version)  # 更新应用版本号
+
         # 检测是否有程序正在运行并弹出对话框
         if self.cmdInterface.socketClient.running:
             w = Dialog('文件正在运行', '当前有文件正在运行，关闭应用将强制结束进程，确认继续吗？')

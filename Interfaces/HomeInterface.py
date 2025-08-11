@@ -12,6 +12,7 @@ from qfluentwidgets import FluentIcon as FIF
 from AppConfig.config import cfg
 from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
+from Interfaces import version
 
 
 class FileTabel(TableWidget):
@@ -467,6 +468,9 @@ class HomeInterface(QWidget):
         for row in range(self.fileTableView.rowCount()):
             oneRow = []
             for column in range(self.fileTableView.columnCount()):
+                if column == 3 or column == 5:  # 不记录修改日期和文件大小
+                    continue
+
                 item = self.fileTableView.item(row, column)
                 try:
                     oneRow.append(item.text())
@@ -498,9 +502,37 @@ class HomeInterface(QWidget):
 
                 # 依次添加文件信息
                 self.fileTableView.blockSignals(True)  # 阻断信号防止加载过程中保存表格信息
-                for i, row in enumerate(allRows):
-                    for j, column in enumerate(row):
-                        self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+
+                if cfg.get(cfg.appVersion) == version:
+                    allFilePath = []
+                    for i, row in enumerate(allRows):
+                        self.fileTableView.setItem(i, 0, QTableWidgetItem(row[0]))  # 文件名
+                        self.fileTableView.setItem(i, 1, QTableWidgetItem(row[1]))  # 备注
+                        self.fileTableView.setItem(i, 2, QTableWidgetItem(row[2]))  # 路径
+                        self.fileTableView.setItem(i, 4, QTableWidgetItem(row[3]))  # 文件类型
+                        allFilePath.append(row[2])
+                else:
+                    allFilePath = []
+                    for i, row in enumerate(allRows):
+                        for j, column in enumerate(row):
+                            if i == 3 or i == 5: continue  # 不加载修改日期和文件大小
+                            if i == 2: allFilePath.append(column)  # 获取文件路径
+                            self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+
+                logging.info('开始刷新文件修改日期和大小……')
+                getInfo_cnt = JarConnector('./backend/fileAdder.jar', allFilePath)
+                allInfos = getInfo_cnt.receiveData()
+                if allInfos:
+                    logging.info('刷新成功')
+                    for rowIndex, fileInfo in enumerate(allInfos):
+                        self.fileTableView.setItem(rowIndex, 3, QTableWidgetItem(fileInfo[1]))
+                        self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[3]))
+                else:
+                    logging.warning('刷新失败')
+                    for i in range(self.fileTableView.rowCount()):
+                        self.fileTableView.setItem(i, 3, QTableWidgetItem('未知'))
+                        self.fileTableView.setItem(i, 5, QTableWidgetItem('未知'))
+
                 self.fileTableView.blockSignals(False)
         except FileNotFoundError:
             pass
