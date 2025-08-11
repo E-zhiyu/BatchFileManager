@@ -131,7 +131,8 @@ class HomeInterface(QWidget):
         menu = RoundMenu()
         fileEdit_actions = [
             Action(FIF.PLAY.icon(color='green'), '运行文件'),
-            Action(FIF.EDIT, '编辑备注')
+            Action(FIF.EDIT, '编辑备注'),
+            Action(FIF.SYNC, '重定向文件')
         ]
         menu.addActions(fileEdit_actions)
         menu.addSeparator()  # 添加一个分割线
@@ -144,6 +145,7 @@ class HomeInterface(QWidget):
         # 绑定动作对应的事件
         fileEdit_actions[0].triggered.connect(lambda: self.runFileAction(row))
         fileEdit_actions[1].triggered.connect(lambda: self.editRemarkAction(row))
+        fileEdit_actions[2].triggered.connect(lambda: self.redirectFile(row))
 
         fileOperation_actions[0].triggered.connect(lambda: self.removeFileAction(row))
         fileOperation_actions[1].triggered.connect(lambda: self.openFolderAction(row))
@@ -279,6 +281,38 @@ class HomeInterface(QWidget):
         """
         logging.info('编辑备注')
         self.fileTableView.editItem(self.fileTableView.item(row, 1))
+
+    def redirectFile(self, row: int):
+        """
+        重定向文件
+        :param row:需要重定向的文件条目所在的行下标
+        """
+
+        filePath = QFileDialog.getOpenFileName(
+            None,
+            '添加文件',
+            '',
+            '批处理和命令脚本 (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
+        )[0]
+        redirect_cnt = JarConnector('./backend/fileAdder.jar', [filePath])
+        fileInfos = redirect_cnt.receiveData()[0]
+
+        self.fileTableView.blockSignals(True)
+        self.fileTableView.setItem(row, 0, QTableWidgetItem(fileInfos[0]))  # 文件名
+        self.fileTableView.setItem(row, 2, QTableWidgetItem(filePath))  # 路径
+        self.fileTableView.setItem(row, 3, QTableWidgetItem(fileInfos[1]))  # 修改日期
+        self.fileTableView.setItem(row, 4, QTableWidgetItem(fileInfos[2]))  # 文件类型
+        self.fileTableView.setItem(row, 5, QTableWidgetItem(fileInfos[3]))  # 文件大小
+
+        # 去除“已失效”标记
+        remark = self.fileTableView.item(row, 1).text()
+        if remark.startswith('（已失效）'):
+            remark = remark.lstrip('（已失效）')
+            self.fileTableView.setItem(row, 1, QTableWidgetItem(remark))
+
+        self.fileTableView.blockSignals(False)
+
+        self.saveContents()
 
     def addFileAction(self):
         """添加文件行为"""
@@ -468,9 +502,7 @@ class HomeInterface(QWidget):
         for row in range(self.fileTableView.rowCount()):
             oneRow = []
             for column in range(self.fileTableView.columnCount()):
-                if column == 3 or column == 5:  # 不记录修改日期和文件大小
-                    continue
-
+                if column == 3 or column == 5: continue  # 不记录修改日期和文件大小
                 item = self.fileTableView.item(row, column)
                 try:
                     oneRow.append(item.text())
