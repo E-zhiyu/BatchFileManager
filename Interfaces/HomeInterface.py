@@ -50,13 +50,13 @@ class HomeInterface(QWidget):
         self.mainLayout.setContentsMargins(5, 5, 5, 5)
         self.mainLayout.setSpacing(10)
 
-        # 初始化控件
-        self.initControls()
+        self.__initControls()  # 初始化控件
+        self.__initShortcuts()  # 初始化快捷键
 
         # 加载已保存的文件内容
         self.loadContents()
 
-    def initControls(self):
+    def __initControls(self):
         """初始化控件"""
 
         # 添加操作按钮
@@ -65,7 +65,7 @@ class HomeInterface(QWidget):
         self.mainLayout.addLayout(self.btnLayout)
 
         self.runButton = PushButton(FIF.PLAY.icon(color='green'), '运行文件')
-        self.runButton.setToolTip('运行单个选中的文件')
+        self.runButton.setToolTip('运行单个选中的文件\n             (F5)')
         self.runButton.installEventFilter(ToolTipFilter(self.runButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.runButton)
         self.runButton.clicked.connect(lambda: self.runFileAction())
@@ -77,7 +77,7 @@ class HomeInterface(QWidget):
         self.addButton.clicked.connect(self.addFileAction)
 
         self.removeButton = PushButton(FIF.DELETE.icon(color='red'), '删除文件')
-        self.removeButton.setToolTip('将选中的文件移出表格')
+        self.removeButton.setToolTip('将选中的文件移出表格\n            (Delete)')
         self.removeButton.installEventFilter(ToolTipFilter(self.removeButton, position=ToolTipPosition.BOTTOM))
         self.btnLayout.addWidget(self.removeButton)
         self.removeButton.clicked.connect(lambda: self.removeFileAction())
@@ -112,6 +112,11 @@ class HomeInterface(QWidget):
         else:
             self.fileTableView.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)  # 备注列拉伸以适应窗口
             self.fileTableView.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # 文件路径拉伸
+
+    def __initShortcuts(self):
+        """初始化快捷键"""
+        self.runButton.setShortcut('F5')
+        self.removeButton.setShortcut('delete')
 
     def showContextMenu(self, pos: QPoint):
         """
