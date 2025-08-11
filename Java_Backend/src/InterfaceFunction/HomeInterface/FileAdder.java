@@ -71,7 +71,6 @@ public class FileAdder implements GrandProcessConnector<List<String>, List<List<
         for (String onePath : filePaths) {
             Path path = Paths.get(onePath);
 
-
             String fileName = path.getFileName().toString();  //获取文件名（带后缀）
             String date = null;
             String extension = fileName.substring(fileName.lastIndexOf(".") + 1);  //获取后缀名

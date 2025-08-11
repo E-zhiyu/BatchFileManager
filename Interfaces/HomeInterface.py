@@ -559,13 +559,13 @@ class HomeInterface(QWidget):
                             self.fileTableView.setItem(i, j, QTableWidgetItem(column))
 
                 logging.info('开始刷新文件修改日期和大小……')
-                getInfo_cnt = JarConnector('./backend/fileAdder.jar', allFilePath)
+                getInfo_cnt = JarConnector('./backend/dateAndSizeGetter.jar', allFilePath)
                 allInfos = getInfo_cnt.receiveData()
                 if allInfos:
                     logging.info('刷新成功')
                     for rowIndex, fileInfo in enumerate(allInfos):
-                        self.fileTableView.setItem(rowIndex, 3, QTableWidgetItem(fileInfo[1]))
-                        self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[3]))
+                        self.fileTableView.setItem(rowIndex, 3, QTableWidgetItem(fileInfo[0]))
+                        self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[1]))
                 else:
                     logging.warning('刷新失败')
                     for i in range(self.fileTableView.rowCount()):
