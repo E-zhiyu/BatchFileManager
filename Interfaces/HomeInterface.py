@@ -554,8 +554,8 @@ class HomeInterface(QWidget):
                     allFilePath = []
                     for i, row in enumerate(allRows):
                         for j, column in enumerate(row):
-                            if i == 3 or i == 5: continue  # 不加载修改日期和文件大小
-                            if i == 2: allFilePath.append(column)  # 获取文件路径
+                            if j == 3 or j == 5: continue  # 不加载修改日期和文件大小
+                            if j == 2: allFilePath.append(column)  # 获取文件路径
                             self.fileTableView.setItem(i, j, QTableWidgetItem(column))
 
                 logging.info('开始刷新文件修改日期和大小……')
