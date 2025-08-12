@@ -571,6 +571,13 @@ class HomeInterface(QWidget):
                     for i in range(self.fileTableView.rowCount()):
                         self.fileTableView.setItem(i, 3, QTableWidgetItem('未知'))
                         self.fileTableView.setItem(i, 5, QTableWidgetItem('未知'))
+                    InfoBar.warning(
+                        '警告',
+                        '软件的Java路径有误，无法获取修改日期和文件大小',
+                        duration=-1,
+                        position=InfoBarPosition.TOP,
+                        parent=self.parentWindow
+                    )
 
                 self.fileTableView.blockSignals(False)
         except FileNotFoundError:
