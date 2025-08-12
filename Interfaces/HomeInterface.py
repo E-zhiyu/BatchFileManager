@@ -334,7 +334,7 @@ class HomeInterface(QWidget):
 
             fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
             file_infos = fileAdd_cnt.receiveData()  # [[文件名,修改日期,后缀名,文件大小],...]
-            if file_infos[0] is not None:  # 判断第一个元素是否为空
+            if file_infos is not None and file_infos[0] is not None:  # 判断是否接受None或者第一个元素是否为空
                 currentRowCount = self.fileTableView.rowCount()
 
                 self.fileTableView.setSortingEnabled(False)  # 暂时禁用排序防止插入的数据错位
