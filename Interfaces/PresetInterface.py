@@ -2,7 +2,7 @@
 import json
 from enum import Enum
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QVBoxLayout
 
@@ -26,18 +26,22 @@ class PresetStyle(Enum):
 class PresetCard(CardWidget):
     """预设卡片类（实例化后调用setFiles方法设置关联的文件路径）"""
 
-    def __init__(self, title, content, style: PresetStyle, parent=None):
+    clicked = pyqtSignal(int)
+
+    def __init__(self, title, content, style: PresetStyle, index, parent=None):
         """
         预设卡片构造方法
         :param title: 卡片标题
         :param content: 卡片描述内容
         :param style: 卡片样式（种类为PresetStyle枚举值）
+        :param index: 该卡片在布局中的下标
         :param parent: 卡片父容器（默认为None）
         """
         super().__init__(parent)
         self.title = title
         self.content = content
         self.style = style
+        self.index = index
         self.parentInterface = parent
         self.isCurrentCard = None
         self.setFixedHeight(73)
@@ -59,6 +63,11 @@ class PresetCard(CardWidget):
 
         cfg.themeChanged.connect(self.refreshStyleSheet)
         cfg.themeColorChanged.connect(self.refreshStyleSheet)
+
+    def mouseReleaseEvent(self, e):
+        """重写鼠标释放功能以发送卡片下标"""
+        super(CardWidget, self).mouseReleaseEvent(e)
+        self.clicked.emit(self.index)
 
     def setFile(self, *files):
         """
@@ -345,9 +354,30 @@ class PresetInterface(QWidget):
         self.cardLayout.setSpacing(5)
 
         """以下代码仅用于测试"""
-        new_card = PresetCard('测试卡片', '这是一个测试卡片', PresetStyle.SWITCH, self)
+        """new_card = PresetCard('测试卡片', '这是一个测试卡片', PresetStyle.SWITCH, 0, self)
+        new_card.clicked.connect(self.changeCurrentCard)
         self.addNewCard(new_card)
-        # new_card.setCurrentCard(True)
+        new_card = PresetCard('测试卡片', '这是一个测试卡片', PresetStyle.SWITCH, 1, self)
+        new_card.clicked.connect(self.changeCurrentCard)
+        self.addNewCard(new_card)"""
+
+    def changeCurrentCard(self, cardIndex: int):
+        """
+        将当前卡片切换为指定下标的卡片
+        :param cardIndex: 指定的卡片下标（-1为取消选中）
+        """
+        if self.currentCardIndex == cardIndex:  # 点击当前卡片则取消选中
+            self.changeCurrentCard(-1)
+            return
+
+        if self.currentCardIndex != -1:
+            last = self.currentCardIndex
+            self.cardList[last].setCurrent(False)
+
+        now = self.currentCardIndex = cardIndex
+
+        if self.currentCardIndex != -1:
+            self.cardList[now].setCurrent(True)
 
     def addPreset(self):
         """添加新预设"""
