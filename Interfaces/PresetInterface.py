@@ -1,11 +1,16 @@
 """文件预设界面模块"""
+import json
 from enum import Enum
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QVBoxLayout
 
 from Connector.JarConnector import JarConnector
-from qfluentwidgets import CardWidget, BodyLabel, CaptionLabel, SwitchButton, PushButton, InfoBar, InfoBarPosition
+
+from qfluentwidgets import CardWidget, BodyLabel, CaptionLabel, SwitchButton, PushButton, InfoBar, InfoBarPosition, \
+    CommandBar, Action, SmoothScrollArea, Theme, isDarkTheme
+from qfluentwidgets import FluentIcon as FIF
 
 from Logs.log_recorder import logging
 from AppConfig.config import cfg
@@ -19,7 +24,7 @@ class PresetStyle(Enum):
 
 
 class PresetCard(CardWidget):
-    """预设卡片类"""
+    """预设卡片类（实例化后调用setFiles方法设置关联的文件路径）"""
 
     def __init__(self, title, content, style: PresetStyle, parent=None):
         """
@@ -34,6 +39,7 @@ class PresetCard(CardWidget):
         self.content = content
         self.style = style
         self.parentInterface = parent
+        self.isCurrentCard = None
         self.setFixedHeight(73)
 
         # 根据样式设置成员属性
@@ -46,10 +52,13 @@ class PresetCard(CardWidget):
         # 基本布局设置
         self.mainLayout = QHBoxLayout(self)
         self.mainLayout.setSpacing(15)
+        self.mainLayout.setContentsMargins(5, 5, 25, 5)
 
-        self.initControls()
+        self.initControls()  # 初始化控件
+        self.setCurrent(False)  # 设置为非当前卡片
 
-        self.clicked.connect(self.setCurrentCard)
+        cfg.themeChanged.connect(self.refreshStyleSheet)
+        cfg.themeColorChanged.connect(self.refreshStyleSheet)
 
     def setFile(self, *files):
         """
@@ -66,10 +75,12 @@ class PresetCard(CardWidget):
         """初始化控件"""
 
         # 指示是否为当前卡片的纯色色块
-        self.__currentFrame = QFrame(self)
+        self.__currentFrame = QFrame(self)  # 标记是否为当前卡片的色块
         self.__currentFrame.setFixedHeight(20)
         self.__currentFrame.setFixedWidth(3)
         self.mainLayout.addWidget(self.__currentFrame)
+
+        self.mainLayout.addSpacing(10)
 
         # 标题和内容
         self.titleContentLayout = QVBoxLayout()
@@ -77,9 +88,13 @@ class PresetCard(CardWidget):
         self.titleLabel = BodyLabel(self.title, self)
         self.contentLabel = CaptionLabel(self.content, self)
         self.contentLabel.setTextColor("#606060", "#d2d2d2")
-        self.titleContentLayout.addWidget(self.titleLabel, 0, Qt.AlignmentFlag.AlignCenter)
-        self.titleContentLayout.addWidget(self.contentLabel, 0, Qt.AlignmentFlag.AlignCenter)
+        self.titleContentLayout.addWidget(self.titleLabel, 0, Qt.AlignmentFlag.AlignLeft)
+        self.titleContentLayout.addWidget(self.contentLabel, 0, Qt.AlignmentFlag.AlignLeft)
         self.mainLayout.addLayout(self.titleContentLayout)
+
+        qss = 'QLabel{background-color: transparent;}'
+        self.titleLabel.setStyleSheet(qss)
+        self.contentLabel.setStyleSheet(qss)
 
         self.mainLayout.addStretch(1)
 
@@ -114,9 +129,10 @@ class PresetCard(CardWidget):
         """用户点击按钮后执行的方法"""
         cmdInterface = self.parentInterface.parentWindow.cmdInterface
         runningFlag = cmdInterface.socketClient.running
+        print(args[0])
 
         if self.style == PresetStyle.SWITCH:
-            if not args[0]:  # 判断开关状态
+            if args[0]:  # 判断开关状态
                 if runningFlag:
                     InfoBar.error(
                         "错误",
@@ -142,12 +158,15 @@ class PresetCard(CardWidget):
                     else:
                         InfoBar.error(
                             "运行失败",
-                            "Java后端运行异常，请检查Java版本",
+                            "请检查Java版本和预设文件",
                             position=InfoBarPosition.TOP,
                             duration=1500,
-                            parent=self.parentWindow
+                            parent=self.parentInterface.parentWindow
                         )
-                        logging.error('运行失败：Java后端运行异常')
+                        logging.error('运行失败：Java后端或预设文件异常')
+                        self.switchButton.blockSignals(True)
+                        self.switchButton.setChecked(False)
+                        self.switchButton.blockSignals(False)
             else:
                 if runningFlag:
                     InfoBar.error(
@@ -173,12 +192,15 @@ class PresetCard(CardWidget):
                     else:
                         InfoBar.error(
                             "运行失败",
-                            "Java后端运行异常，请检查Java版本",
+                            "请检查Java版本和预设文件",
                             position=InfoBarPosition.TOP,
                             duration=1500,
-                            parent=self.parentWindow
+                            parent=self.parentInterface.parentWindow
                         )
-                        logging.error('运行失败：Java后端运行异常')
+                        logging.error('运行失败：Java后端或预设文件异常')
+                        self.switchButton.blockSignals(True)
+                        self.switchButton.setChecked(True)
+                        self.switchButton.blockSignals(False)
         elif self.style == PresetStyle.QUEUE:
             if runningFlag:  # 开始执行队列中的文件前检查是否有正在运行的文件
                 InfoBar.error(
@@ -214,19 +236,67 @@ class PresetCard(CardWidget):
         """获取卡片样式"""
         return self.style
 
-    def setCurrentCard(self, flag: bool = True):
+    def setCurrent(self, flag: bool = True):
         """
-        设置为选中的卡片
+        设置卡片是否为当前卡片
         :param flag: 选中或取消选中
         """
+        if flag == self.isCurrentCard:
+            return
+
+        self.isCurrentCard = flag
         themeColor = cfg.get(cfg.themeColor)
+        theme = cfg.get(cfg.themeMode)
 
         if flag:
-            qss = '{background-color: %s; border: 1px}' % themeColor
+            qss = 'QFrame{background-color: %s; border: 1px}' % themeColor.name()
         else:
-            qss = '{background-color: transparent; border: 1px}'
+            if theme == Theme.AUTO:
+                if isDarkTheme():
+                    theme = Theme.DARK
+                else:
+                    theme = Theme.LIGHT
+
+            if theme == Theme.LIGHT:
+                qss = 'QFrame{background-color: #d2d2d2; border: 1px}'
+            else:
+                qss = 'QFrame{background-color: #606060; border: 1px}'
 
         self.__currentFrame.setStyleSheet(qss)
+
+    def refreshStyleSheet(self, arg: (Theme, QColor)):
+        """
+        主题模式或主题色改变时刷新样式表
+        :param arg: 修改后的主题模式或者主题色
+        """
+
+        label_qss = 'QLabel{background-color: transparent;}'
+        self.titleLabel.setStyleSheet(label_qss)
+        self.contentLabel.setStyleSheet(label_qss)
+
+        if isinstance(arg, QColor):
+            if self.isCurrentCard:
+                qss = 'QFrame{background-color: %s; border: 1px}' % arg.name()
+            else:
+                qss = 'QFrame{background-color: #d2d2d2; border: 1px}'
+            self.__currentFrame.setStyleSheet(qss)
+        elif isinstance(arg, Theme):
+            light_qss = 'QFrame{background-color: #d2d2d2; border: 1px}'
+            dark_qss = 'QFrame{background-color: #606060; border: 1px}'
+
+            if self.isCurrentCard:
+                return  # 如果是当前卡片则不需要改变颜色
+
+            if arg == Theme.AUTO:
+                if isDarkTheme():
+                    arg = Theme.DARK
+                else:
+                    arg = Theme.LIGHT
+
+            if arg == Theme.LIGHT:
+                self.__currentFrame.setStyleSheet(light_qss)
+            else:
+                self.__currentFrame.setStyleSheet(dark_qss)
 
 
 class PresetInterface(QWidget):
@@ -237,11 +307,91 @@ class PresetInterface(QWidget):
         self.parentWindow = parent
         self.setObjectName("PresetInterface")
 
-        self.presetCardList = []
+        self.cardList = []
+        self.currentCardIndex = -1
+
+        # 基本布局设置
+        self.mainLayout = QVBoxLayout(self)
+        self.mainLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.mainLayout.setContentsMargins(5, 5, 5, 5)
+        self.mainLayout.setSpacing(10)
+
+        self.initControls()  # 初始化控件
+
+    def initControls(self):
+        """初始化控件"""
+
+        # 命令栏
+        self.commandBar = CommandBar()
+        self.commandBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)  # 图标右侧显示文字
+        self.mainLayout.addWidget(self.commandBar)
+
+        self.commandBar.addActions([
+            Action(FIF.ADD, '新建预设', triggered=self.addPreset),
+            Action(FIF.DELETE.icon(color='red'), '删除预设', triggered=self.deletePreset),
+            Action(FIF.EDIT, '编辑预设', triggered=self.editPreset)
+        ])
+
+        # 卡片滚动区域
+        self.cardScrollArea = SmoothScrollArea(self)
+        self.mainLayout.addWidget(self.cardScrollArea)
+        self.cardWidget = QWidget(self)
+        self.cardScrollArea.setWidget(self.cardWidget)
+        self.cardScrollArea.setWidgetResizable(True)
+
+        self.cardLayout = QVBoxLayout(self.cardWidget)  # 卡片滚动区域的垂直布局管理器
+        self.cardLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.cardLayout.setContentsMargins(5, 5, 5, 5)
+        self.cardLayout.setSpacing(5)
+
+        """以下代码仅用于测试"""
+        new_card = PresetCard('测试卡片', '这是一个测试卡片', PresetStyle.SWITCH, self)
+        self.addNewCard(new_card)
+        # new_card.setCurrentCard(True)
+
+    def addPreset(self):
+        """添加新预设"""
+        pass
+
+    def deletePreset(self):
+        """删除预设"""
+        pass
+
+    def editPreset(self):
+        """编辑预设"""
+        pass
+
+    def addNewCard(self, card: PresetCard):
+        """
+        添加新卡片到布局中
+        :param card: 待添加的卡片
+        """
+        self.cardLayout.addWidget(card)
+        self.cardList.append(card)
 
     def loadPreset(self):
         """加载保存到文件的预设"""
-        pass
+        try:
+            with open('./config/presets.json', 'r', encoding='utf-8') as f:
+                json_data = json.load(f)
+        except FileNotFoundError:
+            return
+
+        for preset in json_data:
+            title = preset[0]
+            content = preset[1]
+            style = preset[2]
+            new_card = PresetCard(title, content, style, self)
+
+            if style == PresetStyle.SWITCH:
+                openFile = preset[3]
+                closeFile = preset[4]
+                new_card.setFile(openFile, closeFile)
+            elif style == PresetStyle.QUEUE:
+                fileTuple = preset[3]
+                new_card.setFile(fileTuple)
+
+            self.addNewCard(new_card)
 
     def savePreset(self):
         """将预设保存至文件"""
