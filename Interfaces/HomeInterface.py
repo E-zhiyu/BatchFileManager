@@ -135,25 +135,17 @@ class HomeInterface(QWidget):
         # 为菜单添加动作
         menu = RoundMenu()
         fileEdit_actions = [
-            Action(FIF.PLAY.icon(color='green'), '运行文件'),
-            Action(FIF.EDIT, '编辑备注'),
-            Action(FIF.SYNC, '重定向文件')
+            Action(FIF.PLAY.icon(color='green'), '运行文件', triggered=lambda: self.runFileAction(row)),
+            Action(FIF.EDIT, '编辑备注', triggered=lambda: self.editRemarkAction(row)),
+            Action(FIF.SYNC, '重定向文件', triggered=lambda: self.redirectFile(row)),
         ]
         menu.addActions(fileEdit_actions)
         menu.addSeparator()  # 添加一个分割线
         fileOperation_actions = [
-            Action(FIF.DELETE.icon(color='red'), '删除文件'),
-            Action(FIF.FOLDER.icon(color='orange'), '打开文件夹')
+            Action(FIF.DELETE.icon(color='red'), '删除文件', triggered=lambda: self.removeFileAction(row)),
+            Action(FIF.FOLDER.icon(color='orange'), '打开文件夹', triggered=lambda: self.openFolderAction(row)),
         ]
         menu.addActions(fileOperation_actions)
-
-        # 绑定动作对应的事件
-        fileEdit_actions[0].triggered.connect(lambda: self.runFileAction(row))
-        fileEdit_actions[1].triggered.connect(lambda: self.editRemarkAction(row))
-        fileEdit_actions[2].triggered.connect(lambda: self.redirectFile(row))
-
-        fileOperation_actions[0].triggered.connect(lambda: self.removeFileAction(row))
-        fileOperation_actions[1].triggered.connect(lambda: self.openFolderAction(row))
 
         # 计算菜单尺寸
         menu_rect = menu.actionGeometry(menu.actions()[0])  # 获取第一个动作的尺寸
