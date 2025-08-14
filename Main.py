@@ -23,12 +23,14 @@ def themeInit(theme: Theme = None):
         QWidget {
             background-color: #2d2d2d;
             color: #ffffff;
+            border-radius: 5px;
         }
         """
     light_style = """
         QWidget {
             background-color: #f0f0f0;
             color: #000000;
+            border-radius: 5px;
         }
         """
 

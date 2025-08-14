@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QVBoxLayout
 from Connector.JarConnector import JarConnector
 
 from qfluentwidgets import CardWidget, BodyLabel, CaptionLabel, SwitchButton, PushButton, InfoBar, InfoBarPosition, \
-    CommandBar, Action, SmoothScrollArea, Theme, isDarkTheme
+    CommandBar, Action, SmoothScrollArea, Theme, isDarkTheme, MessageBoxBase, ListWidget
 from qfluentwidgets import FluentIcon as FIF
 
 from Logs.log_recorder import logging
@@ -24,19 +24,21 @@ class PresetStyle(Enum):
 
 
 class PresetCard(CardWidget):
-    """预设卡片类（实例化后调用setFiles方法设置关联的文件路径）"""
+    """
+    文件预设卡片
+
+    构造方法参数
+    ------------
+    * title: 卡片标题
+    * content: 卡片描述
+    * style: 卡片样式
+    * index: 卡片位置下标
+    * parent: 卡片所属的界面
+    """
 
     clicked = pyqtSignal(int)
 
     def __init__(self, title, content, style: PresetStyle, index, parent=None):
-        """
-        预设卡片构造方法
-        :param title: 卡片标题
-        :param content: 卡片描述内容
-        :param style: 卡片样式（种类为PresetStyle枚举值）
-        :param index: 该卡片在布局中的下标
-        :param parent: 卡片父容器（默认为None）
-        """
         super().__init__(parent)
         self.title = title
         self.content = content
@@ -240,7 +242,7 @@ class PresetCard(CardWidget):
                         parent=self.parentInterface.parentWindow
                     )
 
-    def getPresetData(self):
+    def getPresetData(self) -> list:
         """
         获取预设信息
         :return: 存放预设信息的列表
@@ -257,7 +259,7 @@ class PresetCard(CardWidget):
 
         return presetData
 
-    def getStyle(self):
+    def getStyle(self) -> PresetStyle:
         """获取卡片样式"""
         return self.style
 
@@ -274,7 +276,7 @@ class PresetCard(CardWidget):
         theme = cfg.get(cfg.themeMode)
 
         if flag:
-            qss = 'QFrame{background-color: %s; border: 1px}' % themeColor.name()
+            qss = 'QFrame{background-color: %s; border-radius: 1px}' % themeColor.name()
         else:
             if theme == Theme.AUTO:
                 if isDarkTheme():
@@ -283,9 +285,9 @@ class PresetCard(CardWidget):
                     theme = Theme.LIGHT
 
             if theme == Theme.LIGHT:
-                qss = 'QFrame{background-color: #d2d2d2; border: 1px}'
+                qss = 'QFrame{background-color: #d2d2d2; border-radius: 1px}'
             else:
-                qss = 'QFrame{background-color: #606060; border: 1px}'
+                qss = 'QFrame{background-color: #606060; border-radius: 1px}'
 
         self.__currentFrame.setStyleSheet(qss)
 
@@ -301,13 +303,13 @@ class PresetCard(CardWidget):
 
         if isinstance(arg, QColor):
             if self.isCurrentCard:
-                qss = 'QFrame{background-color: %s; border: 1px}' % arg.name()
+                qss = 'QFrame{background-color: %s; border-radius: 1px}' % arg.name()
             else:
-                qss = 'QFrame{background-color: #d2d2d2; border: 1px}'
+                qss = 'QFrame{background-color: #d2d2d2; border-radius: 1px}'
             self.__currentFrame.setStyleSheet(qss)
         elif isinstance(arg, Theme):
-            light_qss = 'QFrame{background-color: #d2d2d2; border: 1px}'
-            dark_qss = 'QFrame{background-color: #606060; border: 1px}'
+            light_qss = 'QFrame{background-color: #d2d2d2; border-radius: 1px}'
+            dark_qss = 'QFrame{background-color: #606060; border-radius: 1px}'
 
             if self.isCurrentCard:
                 return  # 如果是当前卡片则不需要改变颜色
@@ -322,6 +324,53 @@ class PresetCard(CardWidget):
                 self.__currentFrame.setStyleSheet(light_qss)
             else:
                 self.__currentFrame.setStyleSheet(dark_qss)
+
+
+class PresetDataInputDialog(MessageBoxBase):
+    """
+    预设信息输入对话框
+
+    构造方法参数
+    ------------
+    * styleSelectable: 是否可选择卡片样式
+    * parent: 待遮罩的对象（建议设置为主窗口）
+    """
+
+    def __init__(self, styleSelectable: bool = True, parent=None):
+        super().__init__(parent)
+        self.styleSelectable = styleSelectable
+        self.parentWindow = parent
+
+        self.widget.setFixedSize(650, 550)
+        self.yesButton.setText('确定')
+        self.cancelButton.setText('取消')
+
+        # 基本布局设置
+        self.layout = QHBoxLayout(self.widget)
+        self.viewLayout.addLayout(self.layout)
+        controlWidget = QWidget()
+        controlWidget.setFixedWidth(350)
+        self.layout.addWidget(controlWidget, 0, Qt.AlignmentFlag.AlignLeft)
+        listWidget = QWidget()
+        listWidget.setFixedWidth(240)
+        self.layout.addWidget(listWidget, 0, Qt.AlignmentFlag.AlignRight)
+
+        # 右侧文件列表布局设置
+        listLayout = QVBoxLayout(listWidget)
+        listLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        listTitle = BodyLabel('已添加的文件')
+        listLayout.addWidget(listTitle)
+        self.fileListControl = ListWidget()
+        listLayout.addWidget(self.fileListControl)
+
+        # 左侧功能控件布局设置
+        self.mainLayout = QVBoxLayout(controlWidget)
+        self.mainLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.initControls()  # 初始化控件
+
+    def initControls(self):
+        pass
 
 
 class PresetInterface(QWidget):
@@ -390,7 +439,8 @@ class PresetInterface(QWidget):
 
     def addPreset(self):
         """添加新预设"""
-        pass
+        w = PresetDataInputDialog(True, self.parentWindow)
+        w.exec()
 
     def deletePreset(self):
         """删除预设"""
