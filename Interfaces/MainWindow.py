@@ -98,10 +98,8 @@ class MainWindow(FluentWindow):
         fileTableWidth = [self.homeInterface.fileTableView.columnWidth(i) for i in range(5)]
         cfg.set(cfg.tableColumnWidth, fileTableWidth)
 
-        # 保存表格内容
-        self.homeInterface.saveContents()
-
-        # 切断与子进程的连接
-        self.cmdInterface.stopCommunicationAndKill()
+        self.homeInterface.saveContents()  # 保存表格内容
+        self.presetInterface.savePreset()  # 保存预设卡片
+        self.cmdInterface.stopCommunicationAndKill()  # 切断与子进程的连接
 
         super().closeEvent(event)

@@ -19,8 +19,8 @@ from AppConfig.config import cfg
 class PresetStyle(Enum):
     """预设卡片种类"""
 
-    SWITCH = 'switch'
-    QUEUE = 'queue'
+    SWITCH = 'Switch'
+    QUEUE = 'Queue'
 
 
 class PresetCard(CardWidget):
@@ -51,7 +51,7 @@ class PresetCard(CardWidget):
             self.openFile = None
             self.closeFile = None
         elif self.style == PresetStyle.QUEUE:
-            self.fileTuple = None
+            self.fileList = None
 
         # 基本布局设置
         self.mainLayout = QHBoxLayout(self)
@@ -78,7 +78,7 @@ class PresetCard(CardWidget):
             self.openFile = files[0]
             self.closeFile = files[1]
         elif self.style == PresetStyle.QUEUE:
-            self.fileTuple = files
+            self.fileList = files
 
     def initControls(self):
         """初始化控件"""
@@ -138,7 +138,6 @@ class PresetCard(CardWidget):
         """用户点击按钮后执行的方法"""
         cmdInterface = self.parentInterface.parentWindow.cmdInterface
         runningFlag = cmdInterface.socketClient.running
-        print(args[0])
 
         if self.style == PresetStyle.SWITCH:
             if args[0]:  # 判断开关状态
@@ -220,7 +219,7 @@ class PresetCard(CardWidget):
                     parent=self.parentInterface.parentWindow
                 )
             else:
-                for i, file in enumerate(self.fileTuple):
+                for i, file in enumerate(self.fileList):
                     if runningFlag: continue
                     flag = self.runFile(file)
                     if not flag:
@@ -240,6 +239,23 @@ class PresetCard(CardWidget):
                         position=InfoBarPosition.TOP,
                         parent=self.parentInterface.parentWindow
                     )
+
+    def getPresetData(self):
+        """
+        获取预设信息
+        :return: 存放预设信息的列表
+        """
+        presetData = []
+
+        if self.style == PresetStyle.SWITCH:
+            btn_stat = self.switchButton.isChecked()
+            open_file = self.openFile
+            close_file = self.closeFile
+            presetData = [btn_stat, open_file, close_file]
+        elif self.style == PresetStyle.QUEUE:
+            presetData = self.fileList
+
+        return presetData
 
     def getStyle(self):
         """获取卡片样式"""
@@ -326,6 +342,7 @@ class PresetInterface(QWidget):
         self.mainLayout.setSpacing(10)
 
         self.initControls()  # 初始化控件
+        self.loadPreset()  # 加载预设卡片
 
     def initControls(self):
         """初始化控件"""
@@ -352,14 +369,6 @@ class PresetInterface(QWidget):
         self.cardLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.cardLayout.setContentsMargins(5, 5, 5, 5)
         self.cardLayout.setSpacing(5)
-
-        """以下代码仅用于测试"""
-        """new_card = PresetCard('测试卡片', '这是一个测试卡片', PresetStyle.SWITCH, 0, self)
-        new_card.clicked.connect(self.changeCurrentCard)
-        self.addNewCard(new_card)
-        new_card = PresetCard('测试卡片', '这是一个测试卡片', PresetStyle.SWITCH, 1, self)
-        new_card.clicked.connect(self.changeCurrentCard)
-        self.addNewCard(new_card)"""
 
     def changeCurrentCard(self, cardIndex: int):
         """
@@ -407,22 +416,44 @@ class PresetInterface(QWidget):
         except FileNotFoundError:
             return
 
-        for preset in json_data:
+        for index, preset in enumerate(json_data):
             title = preset[0]
             content = preset[1]
-            style = preset[2]
-            new_card = PresetCard(title, content, style, self)
+            try:
+                style = PresetStyle(preset[2])
+            except ValueError:
+                style = None
+            presetData = preset[3]
+            new_card = PresetCard(title, content, style, index, self)
 
             if style == PresetStyle.SWITCH:
-                openFile = preset[3]
-                closeFile = preset[4]
+                btn_stat = presetData[0]
+                openFile = presetData[1]
+                closeFile = presetData[2]
+
+                new_card.switchButton.blockSignals(True)
+                new_card.switchButton.setChecked(btn_stat)
+                new_card.switchButton.blockSignals(False)
                 new_card.setFile(openFile, closeFile)
             elif style == PresetStyle.QUEUE:
-                fileTuple = preset[3]
-                new_card.setFile(fileTuple)
+                fileList = presetData
+                new_card.setFile(fileList)
 
             self.addNewCard(new_card)
+            new_card.clicked.connect(self.changeCurrentCard)
 
     def savePreset(self):
         """将预设保存至文件"""
-        pass
+        allPresets = []
+
+        for presetCard in self.cardList:
+            title = presetCard.title
+            content = presetCard.content
+            style = presetCard.getStyle().value
+            presetData = presetCard.getPresetData()
+
+            onePresetCardInfo = [title, content, style, presetData]
+            allPresets.append(onePresetCardInfo)
+
+        with open('./config/presets.json', 'w', encoding='utf-8') as f:
+            json.dump(allPresets, f, ensure_ascii=False, indent=4)
