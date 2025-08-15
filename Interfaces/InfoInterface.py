@@ -55,7 +55,7 @@ updateLog_md = """\
 
 ## 修复BUG
 
-= 修复Java版本不对时添加文件导致崩溃的BUG
+- 修复Java版本不对时添加文件导致崩溃的BUG
 
 
 # v1.0.2

@@ -291,6 +291,9 @@ class HomeInterface(QWidget):
             '',
             '批处理和命令脚本 (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
         )[0]
+        if not filePath:
+            return
+
         redirect_cnt = JarConnector('./backend/fileAdder.jar', [filePath])
         fileInfos = redirect_cnt.receiveData()[0]
 
@@ -308,6 +311,14 @@ class HomeInterface(QWidget):
             self.fileTableView.setItem(row, 1, QTableWidgetItem(remark))
 
         self.fileTableView.blockSignals(False)
+
+        InfoBar.success(
+            '成功',
+            '已更新文件信息',
+            position=InfoBarPosition.TOP,
+            duration=1500,
+            parent=self.parentWindow
+        )
 
         self.saveContents()
 
