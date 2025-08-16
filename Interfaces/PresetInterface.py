@@ -5,7 +5,7 @@ from enum import Enum
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QVBoxLayout, QListWidgetItem
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QVBoxLayout, QListWidgetItem, QFileDialog
 
 from Connector.JarConnector import JarConnector
 
@@ -328,6 +328,20 @@ class PresetCard(CardWidget):
                 self.__currentFrame.setStyleSheet(dark_qss)
 
 
+class RecordableLineEdit(LineEdit):
+    """能够通知父容器自身焦点改变的文本框"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent = parent
+
+    def mousePressEvent(self, event):
+        super().mousePressEvent(event)
+
+        if self.parent:
+            self.parent.setInputControl(self)
+
+
 class PresetDataInputDialog(MessageBoxBase):
     """
     预设信息输入对话框
@@ -344,6 +358,7 @@ class PresetDataInputDialog(MessageBoxBase):
         self.style = style
         self.parentWindow = parent
         self.allFilePaths = []
+        self.inputControl = None
 
         self.widget.setFixedSize(650, 550)
         self.yesButton.setText('确定')
@@ -367,6 +382,7 @@ class PresetDataInputDialog(MessageBoxBase):
         listLayout.addSpacing(10)
         self.fileListControl = ListWidget()
         listLayout.addWidget(self.fileListControl)
+        self.fileListControl.itemClicked.connect(self.inputCollectedFile)
 
         # 左侧功能控件布局设置
         controlWidgetLayout = QVBoxLayout(controlWidget)
@@ -390,6 +406,7 @@ class PresetDataInputDialog(MessageBoxBase):
         if not self.styleSelectable:
             styleSelectComboBox.setEnabled(False)
 
+        # 添加mainLayout布局管理器
         controlWidgetLayout.addSpacing(20)
         self.mainLayout = QVBoxLayout()
         self.mainLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -413,6 +430,7 @@ class PresetDataInputDialog(MessageBoxBase):
 
         styleTuple = tuple(PresetStyle)
         style = styleTuple[styleIndex]
+        self.style = style
 
         # 动态添加左侧容器的内容
         if style == PresetStyle.SWITCH:
@@ -425,14 +443,16 @@ class PresetDataInputDialog(MessageBoxBase):
             openFileInputLayout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self.mainLayout.addLayout(openFileInputLayout)
 
-            self.openFilePathLineEdit = LineEdit()
+            self.openFilePathLineEdit = RecordableLineEdit(self)
             openFileInputLayout.addWidget(self.openFilePathLineEdit)
+            self.openFilePathLineEdit.setClearButtonEnabled(True)
             self.openFilePathLineEdit.setPlaceholderText('请输入开启文件的路径')
 
             openFileSelectButton = ToolButton(FIF.FOLDER)
             openFileInputLayout.addWidget(openFileSelectButton)
             openFileSelectButton.setToolTip('选择开启文件的路径')
             openFileSelectButton.installEventFilter(ToolTipFilter(openFileSelectButton, position=ToolTipPosition.TOP))
+            openFileSelectButton.clicked.connect(lambda: self.addFile(self.openFilePathLineEdit))
 
             self.mainLayout.addSpacing(10)
 
@@ -445,14 +465,16 @@ class PresetDataInputDialog(MessageBoxBase):
             closeFileInputLayout.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self.mainLayout.addLayout(closeFileInputLayout)
 
-            self.closeFilePathLineEdit = LineEdit()
+            self.closeFilePathLineEdit = RecordableLineEdit(self)
             closeFileInputLayout.addWidget(self.closeFilePathLineEdit)
+            self.closeFilePathLineEdit.setClearButtonEnabled(True)
             self.closeFilePathLineEdit.setPlaceholderText('请输入关闭文件的路径')
 
             closeFileSelectButton = ToolButton(FIF.FOLDER)
             closeFileInputLayout.addWidget(closeFileSelectButton)
             closeFileSelectButton.setToolTip('选择关闭文件的路径')
             closeFileSelectButton.installEventFilter(ToolTipFilter(closeFileSelectButton, position=ToolTipPosition.TOP))
+            closeFileSelectButton.clicked.connect(lambda: self.addFile(self.closeFilePathLineEdit))
 
         elif style == PresetStyle.QUEUE:
             headerLayout = QHBoxLayout()
@@ -464,6 +486,7 @@ class PresetDataInputDialog(MessageBoxBase):
             headerLayout.addWidget(addBtn)
             addBtn.setToolTip('添加文件')
             addBtn.installEventFilter(ToolTipFilter(addBtn, position=ToolTipPosition.TOP))
+
             delBtn = ToolButton(FIF.DELETE.icon(color='red'))
             headerLayout.addWidget(delBtn)
             delBtn.setToolTip('移除文件')
@@ -471,6 +494,10 @@ class PresetDataInputDialog(MessageBoxBase):
 
             fileQueueList = ListWidget()
             self.mainLayout.addWidget(fileQueueList)
+
+            addBtn.clicked.connect(lambda: self.addFile(fileQueueList))
+            delBtn.clicked.connect(lambda: self.delFile(fileQueueList))
+            self.setInputControl(fileQueueList)
 
     def showCollectedFiles(self):
         """右侧列表视图显示已保存的文件"""
@@ -487,6 +514,58 @@ class PresetDataInputDialog(MessageBoxBase):
         for file in self.allFilePaths:
             item = QListWidgetItem(os.path.basename(file))
             self.fileListControl.addItem(item)
+
+    def inputCollectedFile(self):
+        """点击右侧文件列表后添加相应的文件路径"""
+        index = self.fileListControl.currentRow()
+        filePath = self.allFilePaths[index]
+
+        if self.style == PresetStyle.SWITCH:
+            if isinstance(self.inputControl, LineEdit):
+                self.inputControl.setText(filePath)
+                self.inputControl.setCursorPosition(0)
+                self.inputControl.setFocus()
+        elif self.style == PresetStyle.QUEUE:
+            if isinstance(self.inputControl, ListWidget):
+                item = QListWidgetItem(os.path.basename(filePath))
+                self.inputControl.addItem(item)
+
+    def setInputControl(self, control):
+        """设置填充已有文件的控件"""
+        self.inputControl = control
+
+    @staticmethod
+    def addFile(control):
+        """
+        向指定控件添加文件路径
+        :param control: 待填充文件路径的控件
+        """
+
+        filePath = QFileDialog.getOpenFileName(
+            None,
+            '添加文件',
+            '',
+            '批处理和命令脚本 (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
+        )[0]
+        if not filePath:
+            return
+
+        if isinstance(control, LineEdit):
+            control.setText(filePath)
+            control.setCursorPosition(0)
+        elif isinstance(control, ListWidget):
+            filename = os.path.basename(filePath)
+            item = QListWidgetItem(f'{filename}({filePath})')
+            control.addItem(item)
+
+    @staticmethod
+    def delFile(control):
+        """
+        将指定控件中指定的文件移除
+        :param control: 需要移除文件的控件
+        """
+        if isinstance(control, ListWidget):
+            control.takeItem(control.currentRow())
 
 
 class PresetInterface(QWidget):
