@@ -811,7 +811,7 @@ class PresetInterface(QWidget):
         if card_index == -1:
             InfoBar.warning(
                 '提示',
-                '请选择一个卡片',
+                '请选择一个预设卡片',
                 position=InfoBarPosition.TOP,
                 duration=1500,
                 parent=self.parentWindow
@@ -847,33 +847,35 @@ class PresetInterface(QWidget):
         presetData = self.cardList[self.currentCardIndex].getPresetData()
 
         w = PresetDataInputDialog(False, cardStyle, self.parentWindow, title, content, presetData)
-        if w.exec():
-            title, content, style, fileData = w.getPresetData()
-            if not fileData:
-                InfoBar.error(
-                    '错误',
-                    '无法获取预设文件信息',
-                    position=InfoBarPosition.TOP,
-                    duration=1500,
-                    parent=self.parentWindow
-                )
-                return
+        if not w.exec():
+            return
 
-            # 实例化新卡片
-            new_card = PresetCard(title, content, style, self.currentCardIndex, self)
-            new_card.setFile(fileData)
-            new_card.clicked.connect(self.changeCurrentCard)
+        title, content, style, fileData = w.getPresetData()
+        if not fileData:
+            InfoBar.error(
+                '错误',
+                '无法获取预设文件信息',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            return
 
-            # 删除旧卡片
-            old_card = self.cardLayout.takeAt(self.currentCardIndex).widget()
-            old_card.deleteLater()
+        # 实例化新卡片
+        new_card = PresetCard(title, content, style, self.currentCardIndex, self)
+        new_card.setFile(fileData)
+        new_card.clicked.connect(self.changeCurrentCard)
 
-            # 添加新卡片
-            self.cardLayout.insertWidget(self.currentCardIndex, new_card)
-            self.cardList[self.currentCardIndex] = new_card
+        # 删除旧卡片
+        old_card = self.cardLayout.takeAt(self.currentCardIndex).widget()
+        old_card.deleteLater()
 
-            self.savePreset()  # 保存预设变更
-            self.changeCurrentCard(-1)  # 将当前卡片下标复位
+        # 添加新卡片
+        self.cardLayout.insertWidget(self.currentCardIndex, new_card)
+        self.cardList[self.currentCardIndex] = new_card
+
+        self.savePreset()  # 保存预设变更
+        self.changeCurrentCard(-1)  # 将当前卡片下标复位
 
     def addNewCard(self, card: PresetCard):
         """

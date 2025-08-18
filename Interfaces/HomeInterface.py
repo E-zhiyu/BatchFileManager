@@ -207,61 +207,7 @@ class HomeInterface(QWidget):
             item = self.fileTableView.item(row, 2)
 
         # 运行文件
-        if not self.parentWindow.cmdInterface.socketClient.running:
-            # 弹出确认对话框
-            w = Dialog('运行文件', '是否确认运行选中的文件')
-            if not w.exec():
-                return  # 对话框选择取消不运行文件
-
-            logging.info('运行文件中……')
-            filePath = item.text()
-            if os.path.isfile(filePath):
-                # 在备注中删除“（已失效）”字样
-                remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
-                if remark.startswith('（已失效）'):
-                    remark = remark.lstrip('（已失效）')
-                    self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
-
-                running_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
-                ack = running_cnt.receiveData()
-                if ack:
-                    InfoBar.success(
-                        '开始运行',
-                        '请前往控制台界面查看运行详情',
-                        position=InfoBarPosition.TOP,
-                        duration=1500,
-                        parent=self.parentWindow
-                    )
-                    logging.info('文件已开始运行')
-                    self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
-                else:
-                    InfoBar.error(
-                        "运行失败",
-                        "Java后端运行异常，请检查Java版本",
-                        position=InfoBarPosition.TOP,
-                        duration=1500,
-                        parent=self.parentWindow
-                    )
-                    logging.error('运行失败：Java后端运行异常')
-                    return  # 应答值为假不运行文件
-            else:
-                # 在备注中标记“（已失效）”
-                remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
-                if not remark.startswith('（已失效）'):
-                    remark = f'（已失效）{remark}'
-                    self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
-
-                self.fileTableView.clearSelection()  # 取消所有选择
-
-                InfoBar.error(
-                    '失败',
-                    '所选的文件不存在',
-                    position=InfoBarPosition.TOP,
-                    duration=1500,
-                    parent=self.parentWindow
-                )
-                logging.error('运行失败：文件不存在')
-        else:
+        if self.parentWindow.cmdInterface.socketClient.running:
             InfoBar.error(
                 '运行失败',
                 '已有正在运行的文件',
@@ -270,6 +216,64 @@ class HomeInterface(QWidget):
                 parent=self.parentWindow
             )
             logging.info('运行失败，已有正在运行的文件')
+            return
+
+        # 弹出确认对话框
+        w = Dialog('运行文件', '是否确认运行选中的文件')
+        if not w.exec():
+            return  # 对话框选择取消不运行文件
+
+        logging.info('运行文件中……')
+        filePath = item.text()
+
+        # 判断文件是否存在
+        if not os.path.isfile(filePath):
+            # 在备注中标记“（已失效）”
+            remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
+            if not remark.startswith('（已失效）'):
+                remark = f'（已失效）{remark}'
+                self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+
+            self.fileTableView.clearSelection()  # 取消所有选择
+
+            InfoBar.error(
+                '失败',
+                '所选的文件不存在',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            logging.error('运行失败：文件不存在')
+            return
+
+        # 在备注中删除“（已失效）”字样
+        remark = self.fileTableView.item(self.fileTableView.currentRow(), 1).text()
+        if remark.startswith('（已失效）'):
+            remark = remark.lstrip('（已失效）')
+            self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
+
+        running_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
+        ack = running_cnt.receiveData()
+        if not ack:
+            InfoBar.error(
+                "运行失败",
+                "Java后端运行异常，请检查Java版本",
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            logging.error('运行失败：Java后端运行异常')
+            return  # 应答值为假不运行文件
+
+        InfoBar.success(
+            '开始运行',
+            '请前往控制台界面查看运行详情',
+            position=InfoBarPosition.TOP,
+            duration=1500,
+            parent=self.parentWindow
+        )
+        logging.info('文件已开始运行')
+        self.parentWindow.cmdInterface.startCommunication()  # 开始与子进程通信
 
     def editRemarkAction(self, row: int):
         """
@@ -331,47 +335,47 @@ class HomeInterface(QWidget):
             '',
             '批处理和命令脚本 (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
         )[0]
+        if not files:
+            return
 
-        if files:
-            logging.info('开始添加文件……')
+        logging.info('开始添加文件……')
+        fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
+        file_infos = fileAdd_cnt.receiveData()  # [[文件名,修改日期,后缀名,文件大小],...]
+        if file_infos is None or file_infos[0] is None:  # 判断是否接受None或者第一个元素是否为空
+            InfoBar.error(
+                '失败',
+                '无法添加文件',
+                duration=1500,
+                position=InfoBarPosition.TOP,
+                parent=self.parentWindow
+            )
+            logging.error('无法添加文件')
+            return
 
-            fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
-            file_infos = fileAdd_cnt.receiveData()  # [[文件名,修改日期,后缀名,文件大小],...]
-            if file_infos is not None and file_infos[0] is not None:  # 判断是否接受None或者第一个元素是否为空
-                currentRowCount = self.fileTableView.rowCount()
+        currentRowCount = self.fileTableView.rowCount()
 
-                self.fileTableView.setSortingEnabled(False)  # 暂时禁用排序防止插入的数据错位
-                self.fileTableView.setRowCount(len(files) + currentRowCount)
-                for index, oneInfo in enumerate(file_infos):
-                    self.fileTableView.setItem(currentRowCount + index, 0, QTableWidgetItem(oneInfo[0]))
-                    self.fileTableView.setItem(currentRowCount + index, 1,
-                                               QTableWidgetItem(None))  # 即使没有获取信息也要填充防止获取内容时类型错误
-                    self.fileTableView.setItem(currentRowCount + index, 2, QTableWidgetItem(files[index]))
-                    self.fileTableView.setItem(currentRowCount + index, 3, QTableWidgetItem(oneInfo[1]))
-                    self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
-                    self.fileTableView.setItem(currentRowCount + index, 5, QTableWidgetItem(oneInfo[3]))
-                self.fileTableView.setSortingEnabled(True)
+        self.fileTableView.setSortingEnabled(False)  # 暂时禁用排序防止插入的数据错位
+        self.fileTableView.setRowCount(len(files) + currentRowCount)
+        for index, oneInfo in enumerate(file_infos):
+            self.fileTableView.setItem(currentRowCount + index, 0, QTableWidgetItem(oneInfo[0]))
+            self.fileTableView.setItem(currentRowCount + index, 1,
+                                       QTableWidgetItem(None))  # 即使没有获取信息也要填充防止获取内容时类型错误
+            self.fileTableView.setItem(currentRowCount + index, 2, QTableWidgetItem(files[index]))
+            self.fileTableView.setItem(currentRowCount + index, 3, QTableWidgetItem(oneInfo[1]))
+            self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
+            self.fileTableView.setItem(currentRowCount + index, 5, QTableWidgetItem(oneInfo[3]))
+        self.fileTableView.setSortingEnabled(True)
 
-                InfoBar.success(
-                    '成功',
-                    f'已添加{len(file_infos)}个文件',
-                    duration=1500,
-                    position=InfoBarPosition.TOP,
-                    parent=self.parentWindow
-                )
-                logging.info(f'成功添加{len(files)}个文件')
+        InfoBar.success(
+            '成功',
+            f'已添加{len(file_infos)}个文件',
+            duration=1500,
+            position=InfoBarPosition.TOP,
+            parent=self.parentWindow
+        )
+        logging.info(f'成功添加{len(files)}个文件')
 
-            else:
-                InfoBar.error(
-                    '失败',
-                    '无法添加文件',
-                    duration=1500,
-                    position=InfoBarPosition.TOP,
-                    parent=self.parentWindow
-                )
-                logging.error('无法添加文件')
-
-            self.saveContents()
+        self.saveContents()
 
     def removeFileAction(self, row: int = None):
         """
@@ -384,34 +388,7 @@ class HomeInterface(QWidget):
 
         if row is None:
             selectedRanges = self.fileTableView.selectedRanges()
-            if selectedRanges:
-                w = Dialog('删除文件', '确认从列表中删除选中的文件吗？（此操作不会删除硬盘上的文件）', self.parentWindow)
-                if w.exec():
-                    # 收集所有要删除的行索引（从大到小排序）
-                    rowsToDelete = set()
-                    for range_obj in selectedRanges:
-                        rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
-
-                    # 从大到小删除（避免索引变化问题）
-                    i = 0
-                    for row in sorted(rowsToDelete, reverse=True):
-                        self.fileTableView.removeRow(row)
-                        i += 1
-
-                    self.fileTableView.setRowCount(currentRowCount - i)  # 减少行数
-                    self.fileTableView.clearSelection()  # 取消所有选择
-
-                    InfoBar.success(
-                        '成功',
-                        '已删除选中的文件',
-                        duration=1500,
-                        position=InfoBarPosition.TOP,
-                        parent=self.parentWindow
-                    )
-
-                    logging.info(f'已删除{i}个文件')
-                    self.saveContents()
-            else:
+            if not selectedRanges:
                 InfoBar.warning(
                     '提示',
                     '请选择至少一个文件',
@@ -419,23 +396,55 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                return
+
+            w = Dialog('删除文件', '确认从列表中删除选中的文件吗？（此操作不会删除硬盘上的文件）', self.parentWindow)
+            if not w.exec():
+                return
+
+            # 收集所有要删除的行索引（从大到小排序）
+            rowsToDelete = set()
+            for range_obj in selectedRanges:
+                rowsToDelete.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+
+            # 从大到小删除（避免索引变化问题）
+            i = 0
+            for row in sorted(rowsToDelete, reverse=True):
+                self.fileTableView.removeRow(row)
+                i += 1
+
+            self.fileTableView.setRowCount(currentRowCount - i)  # 减少行数
+            self.fileTableView.clearSelection()  # 取消所有选择
+
+            InfoBar.success(
+                '成功',
+                '已删除选中的文件',
+                duration=1500,
+                position=InfoBarPosition.TOP,
+                parent=self.parentWindow
+            )
+
+            logging.info(f'已删除{i}个文件')
+            self.saveContents()
         else:
             w = Dialog('删除文件', '确认从列表中删除选中的文件吗？（此操作不会删除硬盘上的文件）', self.parentWindow)
-            if w.exec():
-                self.fileTableView.removeRow(row)
-                self.fileTableView.setRowCount(currentRowCount - 1)  # 减少行数
-                self.fileTableView.clearSelection()  # 取消所有选择
+            if not w.exec():
+                return
 
-                InfoBar.success(
-                    '成功',
-                    '已删除选中的文件',
-                    duration=1500,
-                    position=InfoBarPosition.TOP,
-                    parent=self.parentWindow
-                )
+            self.fileTableView.removeRow(row)
+            self.fileTableView.setRowCount(currentRowCount - 1)  # 减少行数
+            self.fileTableView.clearSelection()  # 取消所有选择
 
-                logging.info('已删除1个文件')
-                self.saveContents()
+            InfoBar.success(
+                '成功',
+                '已删除选中的文件',
+                duration=1500,
+                position=InfoBarPosition.TOP,
+                parent=self.parentWindow
+            )
+
+            logging.info('已删除1个文件')
+            self.saveContents()
 
     def openFolderAction(self, row: int = None):
         """
@@ -446,39 +455,7 @@ class HomeInterface(QWidget):
         if row is None:
             selectedRanges = self.fileTableView.selectedRanges()
 
-            if selectedRanges:
-                # 收集所有要删除的行索引（从大到小排序）
-                selectedRowsIndex = set()
-                for range_obj in selectedRanges:
-                    selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
-
-                dirToOpen = []
-                for i in selectedRowsIndex:
-                    item = self.fileTableView.item(i, 2)
-                    filePath = item.text()
-                    directory = os.path.dirname(filePath).replace('/', '\\')
-                    if os.path.isdir(directory):
-                        dirToOpen.append(directory)
-
-                dirToOpen = set(dirToOpen)
-                if len(dirToOpen) > 3:
-                    w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致桌面混乱，确认继续吗？', self.parentWindow)
-                    if w.exec():
-                        for dir in dirToOpen:
-                            os.startfile(dir)
-                elif len(dirToOpen) == 0:
-                    InfoBar.error(
-                        '失败',
-                        '所选文件的目录均不存在',
-                        position=InfoBarPosition.TOP,
-                        duration=1500,
-                        parent=self.parentWindow
-                    )
-                else:
-                    for dir in dirToOpen:
-                        os.startfile(dir)
-                    logging.info('用户打开文件所在目录')
-            else:
+            if not selectedRanges:  # 排除没有选择的情况
                 InfoBar.warning(
                     '提示',
                     '请选择至少一个文件',
@@ -486,16 +463,46 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                return
+
+            # 收集所有要删除的行索引（从大到小排序）
+            selectedRowsIndex = set()
+            for range_obj in selectedRanges:
+                selectedRowsIndex.update(range(range_obj.topRow(), range_obj.bottomRow() + 1))
+
+            dirToOpen = []
+            for i in selectedRowsIndex:
+                item = self.fileTableView.item(i, 2)
+                filePath = item.text()
+                directory = os.path.dirname(filePath).replace('/', '\\')
+                if os.path.isdir(directory):
+                    dirToOpen.append(directory)
+
+            dirToOpen = set(dirToOpen)
+            if len(dirToOpen) > 3:
+                w = Dialog('打开文件夹', '一次性打开过多文件夹可能导致桌面混乱，确认继续吗？', self.parentWindow)
+                if w.exec():
+                    for directory in dirToOpen:
+                        os.startfile(directory)
+            elif len(dirToOpen) == 0:
+                InfoBar.error(
+                    '失败',
+                    '所选文件的目录均不存在',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+            else:
+                for directory in dirToOpen:
+                    os.startfile(directory)
+                logging.info('用户打开文件所在目录')
         else:
             # 获取目录路径
             item = self.fileTableView.item(row, 2)
             filePath = item.text()
             directory = os.path.dirname(filePath).replace('/', '\\')
 
-            if os.path.isdir(directory):
-                os.startfile(directory)
-                logging.info('用户打开文件所在目录')
-            else:
+            if not os.path.isdir(directory):
                 InfoBar.error(
                     '失败',
                     '所选文件的目录不存在',
@@ -503,6 +510,10 @@ class HomeInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                return
+
+            os.startfile(directory)
+            logging.info('用户打开文件所在目录')
 
     def saveContents(self):
         """将表格的内容保存至文件"""
@@ -533,55 +544,55 @@ class HomeInterface(QWidget):
         try:
             with open('./config/fileTableContents.json', 'r', encoding='utf-8') as f:
                 allRows = json.load(f)
-
-                # 检测文件是否存在
-                for rowIndex, fileInfo in enumerate(allRows):
-                    if not os.path.isfile(fileInfo[2]) and not allRows[rowIndex][1].startswith('（已失效）'):
-                        allRows[rowIndex][1] = f'（已失效）{fileInfo[1]}'  # 如果文件不存在则在备注中标记
-
-                # 设置表格行数
-                self.fileTableView.setRowCount(len(allRows))
-
-                # 依次添加文件信息
-                self.fileTableView.blockSignals(True)  # 阻断信号防止加载过程中保存表格信息
-
-                if cfg.get(cfg.appVersion) == version:
-                    allFilePath = []
-                    for i, row in enumerate(allRows):
-                        self.fileTableView.setItem(i, 0, QTableWidgetItem(row[0]))  # 文件名
-                        self.fileTableView.setItem(i, 1, QTableWidgetItem(row[1]))  # 备注
-                        self.fileTableView.setItem(i, 2, QTableWidgetItem(row[2]))  # 路径
-                        self.fileTableView.setItem(i, 4, QTableWidgetItem(row[3]))  # 文件类型
-                        allFilePath.append(row[2])
-                else:
-                    allFilePath = []
-                    for i, row in enumerate(allRows):
-                        for j, column in enumerate(row):
-                            if j == 3 or j == 5: continue  # 不加载修改日期和文件大小
-                            if j == 2: allFilePath.append(column)  # 获取文件路径
-                            self.fileTableView.setItem(i, j, QTableWidgetItem(column))
-
-                logging.info('开始刷新文件修改日期和大小……')
-                getInfo_cnt = JarConnector('./backend/dateAndSizeGetter.jar', allFilePath)
-                allInfos = getInfo_cnt.receiveData()
-                if allInfos:
-                    logging.info('刷新成功')
-                    for rowIndex, fileInfo in enumerate(allInfos):
-                        self.fileTableView.setItem(rowIndex, 3, QTableWidgetItem(fileInfo[0]))
-                        self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[1]))
-                else:
-                    logging.warning('刷新失败')
-                    for i in range(self.fileTableView.rowCount()):
-                        self.fileTableView.setItem(i, 3, QTableWidgetItem('未知'))
-                        self.fileTableView.setItem(i, 5, QTableWidgetItem('未知'))
-                    InfoBar.warning(
-                        '警告',
-                        '软件的Java路径有误，无法获取修改日期和文件大小',
-                        duration=-1,
-                        position=InfoBarPosition.TOP,
-                        parent=self.parentWindow
-                    )
-
-                self.fileTableView.blockSignals(False)
         except FileNotFoundError:
-            pass
+            return
+
+        # 检测文件是否存在
+        for rowIndex, fileInfo in enumerate(allRows):
+            if not os.path.isfile(fileInfo[2]) and not allRows[rowIndex][1].startswith('（已失效）'):
+                allRows[rowIndex][1] = f'（已失效）{fileInfo[1]}'  # 如果文件不存在则在备注中标记
+
+        # 设置表格行数
+        self.fileTableView.setRowCount(len(allRows))
+
+        # 依次添加文件信息
+        self.fileTableView.blockSignals(True)  # 阻断信号防止加载过程中保存表格信息
+
+        if cfg.get(cfg.appVersion) == version:
+            allFilePath = []
+            for i, row in enumerate(allRows):
+                self.fileTableView.setItem(i, 0, QTableWidgetItem(row[0]))  # 文件名
+                self.fileTableView.setItem(i, 1, QTableWidgetItem(row[1]))  # 备注
+                self.fileTableView.setItem(i, 2, QTableWidgetItem(row[2]))  # 路径
+                self.fileTableView.setItem(i, 4, QTableWidgetItem(row[3]))  # 文件类型
+                allFilePath.append(row[2])
+        else:
+            allFilePath = []
+            for i, row in enumerate(allRows):
+                for j, column in enumerate(row):
+                    if j == 3 or j == 5: continue  # 不加载修改日期和文件大小
+                    if j == 2: allFilePath.append(column)  # 获取文件路径
+                    self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+
+        logging.info('开始刷新文件修改日期和大小……')
+        getInfo_cnt = JarConnector('./backend/dateAndSizeGetter.jar', allFilePath)
+        allInfos = getInfo_cnt.receiveData()
+        if allInfos:
+            logging.info('刷新成功')
+            for rowIndex, fileInfo in enumerate(allInfos):
+                self.fileTableView.setItem(rowIndex, 3, QTableWidgetItem(fileInfo[0]))
+                self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[1]))
+        else:
+            logging.warning('刷新失败')
+            for i in range(self.fileTableView.rowCount()):
+                self.fileTableView.setItem(i, 3, QTableWidgetItem('未知'))
+                self.fileTableView.setItem(i, 5, QTableWidgetItem('未知'))
+            InfoBar.warning(
+                '警告',
+                '软件的Java路径有误，无法获取修改日期和文件大小',
+                duration=-1,
+                position=InfoBarPosition.TOP,
+                parent=self.parentWindow
+            )
+
+        self.fileTableView.blockSignals(False)
