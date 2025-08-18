@@ -2,6 +2,7 @@
 import json
 import os
 from enum import Enum
+from multiprocessing.spawn import old_main_modules
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
@@ -349,14 +350,17 @@ class PresetDataInputDialog(MessageBoxBase):
     构造方法参数
     ------------
     * styleSelectable: 是否可选择卡片样式
+    * style: 输入框样式
     * parent: 待遮罩的对象（建议设置为主窗口）
+    * presetData: 待填充的预设信息列表    [title,content,[presetDatas...]]
     """
 
-    def __init__(self, styleSelectable: bool = True, style: PresetStyle = PresetStyle.SWITCH, parent=None):
+    def __init__(self, styleSelectable: bool = True, style: PresetStyle = PresetStyle.SWITCH, parent=None, *presetData):
         super().__init__(parent)
         self.styleSelectable = styleSelectable
         self.style = style
         self.parentWindow = parent
+        self.presetData = presetData
         self.allFilePaths = []
         self.inputControl = None  # 待填充已添加文件信息的控件
 
@@ -382,7 +386,7 @@ class PresetDataInputDialog(MessageBoxBase):
         listLayout.addSpacing(10)
         self.fileListControl = ListWidget()
         listLayout.addWidget(self.fileListControl)
-        self.fileListControl.itemClicked.connect(self.inputCollectedFile)
+        self.fileListControl.itemClicked.connect(self.__inputCollectedFile)
 
         # 左侧功能控件布局设置
         controlWidgetLayout = QVBoxLayout(controlWidget)
@@ -390,14 +394,14 @@ class PresetDataInputDialog(MessageBoxBase):
 
         styleLayout = QHBoxLayout()
         controlWidgetLayout.addLayout(styleLayout)
-        changeStyleLabel = BodyLabel('选择样式')
+        changeStyleLabel = BodyLabel('预设样式')
         styleLayout.addWidget(changeStyleLabel)
         styleSelectComboBox = ComboBox()
         styleLayout.addWidget(styleSelectComboBox)
         styleSelectComboBox.setFixedWidth(100)
         items = ['开关', '队列']
         styleSelectComboBox.addItems(items)
-        styleSelectComboBox.currentIndexChanged.connect(self.initMainControls)
+        styleSelectComboBox.currentIndexChanged.connect(self.__initMainControls)
 
         titleLayout = QHBoxLayout()
         controlWidgetLayout.addLayout(titleLayout)
@@ -432,10 +436,11 @@ class PresetDataInputDialog(MessageBoxBase):
         self.mainLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
         controlWidgetLayout.addLayout(self.mainLayout)
 
-        self.initMainControls(styleSelectComboBox.currentIndex())  # 初始化主要的控件
-        self.showCollectedFiles()  # 将文件添加至列表视图
+        self.__initMainControls(styleSelectComboBox.currentIndex())  # 初始化主要的控件
+        self.__showCollectedFiles()  # 将文件添加至列表视图
+        self.__setPresetData()  # 初始化预设信息
 
-    def initMainControls(self, styleIndex: int = 0):
+    def __initMainControls(self, styleIndex: int = 0):
         # 先删除旧控件
         while self.mainLayout.count():
             item = self.mainLayout.takeAt(0)
@@ -472,7 +477,7 @@ class PresetDataInputDialog(MessageBoxBase):
             openFileInputLayout.addWidget(openFileSelectButton)
             openFileSelectButton.setToolTip('选择开启文件的路径')
             openFileSelectButton.installEventFilter(ToolTipFilter(openFileSelectButton, position=ToolTipPosition.TOP))
-            openFileSelectButton.clicked.connect(lambda: self.addFile(self.openFilePathLineEdit))
+            openFileSelectButton.clicked.connect(lambda: self.__addFile(self.openFilePathLineEdit))
 
             self.mainLayout.addSpacing(10)
 
@@ -494,7 +499,7 @@ class PresetDataInputDialog(MessageBoxBase):
             closeFileInputLayout.addWidget(closeFileSelectButton)
             closeFileSelectButton.setToolTip('选择关闭文件的路径')
             closeFileSelectButton.installEventFilter(ToolTipFilter(closeFileSelectButton, position=ToolTipPosition.TOP))
-            closeFileSelectButton.clicked.connect(lambda: self.addFile(self.closeFilePathLineEdit))
+            closeFileSelectButton.clicked.connect(lambda: self.__addFile(self.closeFilePathLineEdit))
 
         elif style == PresetStyle.QUEUE:
             headerLayout = QHBoxLayout()
@@ -515,11 +520,11 @@ class PresetDataInputDialog(MessageBoxBase):
             fileQueueList = ListWidget()
             self.mainLayout.addWidget(fileQueueList)
 
-            addBtn.clicked.connect(lambda: self.addFile(fileQueueList))
-            delBtn.clicked.connect(lambda: self.delFile(fileQueueList))
+            addBtn.clicked.connect(lambda: self.__addFile(fileQueueList))
+            delBtn.clicked.connect(lambda: self.__delFile(fileQueueList))
             self.setInputControl(fileQueueList)
 
-    def showCollectedFiles(self):
+    def __showCollectedFiles(self):
         """右侧列表视图显示已保存的文件"""
 
         # 读取JSON文件中的路径
@@ -535,7 +540,7 @@ class PresetDataInputDialog(MessageBoxBase):
             item = QListWidgetItem(os.path.basename(file))
             self.fileListControl.addItem(item)
 
-    def inputCollectedFile(self):
+    def __inputCollectedFile(self):
         """点击右侧文件列表后添加相应的文件路径"""
         index = self.fileListControl.currentRow()
         filePath = self.allFilePaths[index]
@@ -549,6 +554,30 @@ class PresetDataInputDialog(MessageBoxBase):
             if isinstance(self.inputControl, ListWidget):
                 item = QListWidgetItem(filePath)
                 self.inputControl.addItem(item)
+
+    def __setPresetData(self):
+        """填充外部传递的预设信息"""
+        if not self.presetData:
+            return
+
+        title = self.presetData[0]
+        content = self.presetData[1]
+        self.titleLineEdit.setText(title)
+        self.titleLineEdit.setCursorPosition(0)
+        self.contentLineEdit.setText(content)
+        self.contentLineEdit.setCursorPosition(0)
+
+        if self.style == PresetStyle.SWITCH:
+            btn_stat, openFile, closeFile = self.presetData[2]
+            self.openFilePathLineEdit.setText(openFile)
+            self.openFilePathLineEdit.setCursorPosition(0)
+            self.closeFilePathLineEdit.setText(closeFile)
+            self.closeFilePathLineEdit.setCursorPosition(0)
+        elif self.style == PresetStyle.QUEUE:
+            fileList = self.presetData[2]
+            for file in fileList:
+                item = QListWidgetItem(file)
+                self.fileListControl.addItem(item)
 
     def getPresetData(self) -> list:
         """
@@ -580,7 +609,7 @@ class PresetDataInputDialog(MessageBoxBase):
         self.inputControl = control
 
     @staticmethod
-    def addFile(control):
+    def __addFile(control):
         """
         向指定控件添加文件路径
         :param control: 待填充文件路径的控件
@@ -604,7 +633,7 @@ class PresetDataInputDialog(MessageBoxBase):
             control.addItem(item)
 
     @staticmethod
-    def delFile(control):
+    def __delFile(control):
         """
         将指定控件中指定的文件移除
         :param control: 需要移除文件的控件
@@ -722,7 +751,48 @@ class PresetInterface(QWidget):
 
     def editPreset(self):
         """编辑预设"""
-        pass
+        if self.currentCardIndex == -1:
+            InfoBar.warning(
+                '提示',
+                '请选择一个预设卡片',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            return
+
+        cardStyle = self.cardList[self.currentCardIndex].getStyle()
+        title = self.cardList[self.currentCardIndex].title
+        content = self.cardList[self.currentCardIndex].content
+        presetData = self.cardList[self.currentCardIndex].getPresetData()
+
+        w = PresetDataInputDialog(False, cardStyle, self.parentWindow, title, content, presetData)
+        if w.exec():
+            title, content, style, fileData = w.getPresetData()
+            if not fileData:
+                InfoBar.error(
+                    '错误',
+                    '无法获取预设文件信息',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+                return
+
+            # 实例化新卡片
+            new_card = PresetCard(title, content, style, self.currentCardIndex, self)
+            new_card.setFile(fileData)
+            new_card.clicked.connect(self.changeCurrentCard)
+
+            # 删除旧卡片
+            old_card = self.cardLayout.takeAt(self.currentCardIndex).widget()
+            old_card.deleteLater()
+
+            # 添加新卡片
+            self.cardLayout.insertWidget(self.currentCardIndex, new_card)
+            self.cardList[self.currentCardIndex] = new_card
+
+            self.changeCurrentCard(-1)  # 将当前卡片下标复位
 
     def addNewCard(self, card: PresetCard):
         """
