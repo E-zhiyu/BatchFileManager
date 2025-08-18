@@ -1,7 +1,7 @@
 """设置界面模块"""
 import os
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QHBoxLayout, QButtonGroup
 
 from qfluentwidgets import (ScrollArea, SettingCardGroup, OptionsSettingCard, QConfig, FluentIcon, RadioButton,

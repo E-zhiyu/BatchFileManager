@@ -2,21 +2,31 @@
 import json
 import os
 from enum import Enum
-from multiprocessing.spawn import old_main_modules
 
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QVBoxLayout, QListWidgetItem, QFileDialog
 
-from Connector.JarConnector import JarConnector
-
 from qfluentwidgets import CardWidget, BodyLabel, CaptionLabel, SwitchButton, PushButton, InfoBar, InfoBarPosition, \
     CommandBar, Action, SmoothScrollArea, Theme, isDarkTheme, MessageBoxBase, ListWidget, ComboBox, LineEdit, \
-    ToolButton, ToolTipFilter, ToolTipPosition
+    ToolButton, ToolTipFilter, ToolTipPosition, SubtitleLabel, TextBrowser
 from qfluentwidgets import FluentIcon as FIF
 
+from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
 from AppConfig.config import cfg
+
+style_introduction = """\
+## 开关
+
+- 功能：用户点击开关按钮后分别运行开启文件和关闭文件
+- 文件说明：需要设置一个开启文件和一个关闭文件，用于在切换开关状态时执行相应的操作
+
+## 队列
+
+- 功能：按照新建预设时从上到下的顺序依次运行文件
+- 文件说明：需要一个或多个文件，运行该队列时将会按照顺序依次执行文件
+"""
 
 
 class PresetStyle(Enum):
@@ -24,6 +34,28 @@ class PresetStyle(Enum):
 
     SWITCH = 'Switch'
     QUEUE = 'Queue'
+
+
+class TextMessageBox(MessageBoxBase):
+    """显示MarkDown文本的对话框类"""
+
+    def __init__(self, title: str, md: str, parent=None):
+        """
+        :param md: 需要显示的文本
+        :param parent: 需要遮罩的窗口（推荐设置为主窗口）
+        """
+        super().__init__(parent)
+        self.widget.setMinimumWidth(550)  # 设置最小窗口宽度
+        self.widget.setFixedHeight(500)  # 设置固定窗口高度
+        self.cancelButton.hide()  # 隐藏取消按钮
+        self.yesButton.setText('确定')
+
+        titleLabel = SubtitleLabel(title)
+        self.viewLayout.addWidget(titleLabel)
+
+        txtBrowser = TextBrowser(self)
+        txtBrowser.setMarkdown(md)
+        self.viewLayout.addWidget(txtBrowser)
 
 
 class PresetCard(CardWidget):
@@ -102,7 +134,7 @@ class PresetCard(CardWidget):
         self.titleContentLayout = QVBoxLayout()
         self.titleContentLayout.setSpacing(0)
         self.titleLabel = BodyLabel(self.title, self)
-        self.contentLabel = CaptionLabel(self.content, self)
+        self.contentLabel = CaptionLabel(self.content if self.content else '<无描述>', self)
         self.contentLabel.setTextColor("#606060", "#d2d2d2")
         self.titleContentLayout.addWidget(self.titleLabel, 0, Qt.AlignmentFlag.AlignLeft)
         self.titleContentLayout.addWidget(self.contentLabel, 0, Qt.AlignmentFlag.AlignLeft)
@@ -643,6 +675,37 @@ class PresetDataInputDialog(MessageBoxBase):
         if isinstance(control, ListWidget):
             control.takeItem(control.currentRow())
 
+    def validate(self) -> bool:
+        """重写验证方法"""
+        flag = True
+        warning_content = ''
+
+        if not self.titleLineEdit.text():
+            flag = False
+            warning_content = '请输入标题'
+        elif self.style == PresetStyle.SWITCH:
+            openFile = self.openFilePathLineEdit.text()
+            closeFile = self.closeFilePathLineEdit.text()
+            if not os.path.isfile(openFile):
+                flag = False
+                warning_content = '请输入正确的开启文件的路径'
+            elif not os.path.isfile(closeFile):
+                flag = False
+                warning_content = '请输入正确的关闭文件的路径'
+        elif self.style == PresetStyle.QUEUE:
+            if not self.fileListControl.count():
+                flag = False
+                warning_content = '请添加至少一个文件'
+
+        if not flag:
+            InfoBar.error(
+                '错误',
+                warning_content,
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self
+            )
+        return flag
 
 class PresetInterface(QWidget):
     """文件预设界面类"""
@@ -667,16 +730,27 @@ class PresetInterface(QWidget):
     def initControls(self):
         """初始化控件"""
 
+        btnLayout = QHBoxLayout()
+        btnLayout.setContentsMargins(5, 5, 5, 5)
+        self.mainLayout.addLayout(btnLayout)
+
         # 命令栏
         self.commandBar = CommandBar()
         self.commandBar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)  # 图标右侧显示文字
-        self.mainLayout.addWidget(self.commandBar)
+        btnLayout.addWidget(self.commandBar)
 
         self.commandBar.addActions([
             Action(FIF.ADD, '新建预设', triggered=self.addPreset),
             Action(FIF.DELETE.icon(color='red'), '删除预设', triggered=self.deletePreset),
             Action(FIF.EDIT, '编辑预设', triggered=self.editPreset)
         ])
+
+        # 预设说明按钮
+        helpBtn = ToolButton(FIF.HELP)
+        btnLayout.addWidget(helpBtn, 0, Qt.AlignmentFlag.AlignRight)
+        helpBtn.setToolTip('预设说明')
+        helpBtn.installEventFilter(ToolTipFilter(helpBtn, position=ToolTipPosition.TOP_RIGHT))
+        helpBtn.clicked.connect(self.showHelp)
 
         # 卡片滚动区域
         self.cardScrollArea = SmoothScrollArea(self)
@@ -806,6 +880,11 @@ class PresetInterface(QWidget):
         self.cardLayout.addWidget(card)
         self.cardList.append(card)
         self.savePreset()  # 操作结束即保存预设
+
+    def showHelp(self):
+        """显示帮助信息窗口"""
+        w = TextMessageBox('预设说明',style_introduction,self.parentWindow)
+        w.exec()
 
     def loadPreset(self):
         """加载保存到文件的预设"""
