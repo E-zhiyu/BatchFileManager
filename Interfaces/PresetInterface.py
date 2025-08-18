@@ -37,13 +37,17 @@ class PresetStyle(Enum):
 
 
 class TextMessageBox(MessageBoxBase):
-    """显示MarkDown文本的对话框类"""
+    """
+    显示MarkDown文本的对话框类
+
+    构造方法参数
+    ------------
+    * title: 对话框标题
+    * md: 需要显示的Markdown文本
+    * parent: 需要遮罩的窗体（建议设置为主窗体）
+    """
 
     def __init__(self, title: str, md: str, parent=None):
-        """
-        :param md: 需要显示的文本
-        :param parent: 需要遮罩的窗口（推荐设置为主窗口）
-        """
         super().__init__(parent)
         self.widget.setMinimumWidth(550)  # 设置最小窗口宽度
         self.widget.setFixedHeight(500)  # 设置固定窗口高度
