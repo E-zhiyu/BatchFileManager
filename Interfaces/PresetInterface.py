@@ -51,6 +51,8 @@ class PresetCard(CardWidget):
         self.isCurrentCard = None
         self.setFixedHeight(73)
 
+        if not isinstance(style, PresetStyle): raise TypeError  # 样式种类错误则抛出异常
+
         # 根据样式设置成员属性
         if self.style == PresetStyle.SWITCH:
             self.openFile = None
@@ -792,6 +794,7 @@ class PresetInterface(QWidget):
             self.cardLayout.insertWidget(self.currentCardIndex, new_card)
             self.cardList[self.currentCardIndex] = new_card
 
+            self.savePreset()  # 保存预设变更
             self.changeCurrentCard(-1)  # 将当前卡片下标复位
 
     def addNewCard(self, card: PresetCard):
