@@ -59,6 +59,7 @@ updateLog_md = """\
 ## 修复BUG
 
 - 修复设置界面卡片背景色异常的BUG
+- 修复更新应用后文件信息丢失的BUG
 
 
 # v1.1.0
@@ -177,7 +178,7 @@ class InfoInterface(QWidget):
         setFont(titleLabel, 25, QFont.Weight.Bold)
 
         # 版本号标签
-        versionLabel = BodyLabel(f'版本：{version}', self.totalWidget)
+        versionLabel = BodyLabel(f'版本：v{version}', self.totalWidget)
         self.mainLayout.addWidget(versionLabel, 0, Qt.AlignmentFlag.AlignCenter)
 
         # 作者标签

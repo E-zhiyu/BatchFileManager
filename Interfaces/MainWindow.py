@@ -37,9 +37,9 @@ class MainWindow(FluentWindow):
         :param isRunning: 文件是否运行
         """
         if isRunning:
-            self.setWindowTitle(f'BatchFileManager-{version}（正在运行）')
+            self.setWindowTitle(f'BatchFileManager-v{version}（正在运行）')
         else:
-            self.setWindowTitle(f'BatchFileManager-{version}')
+            self.setWindowTitle(f'BatchFileManager-v{version}')
 
     def initSubInterfaces(self):
         """初始化子窗口"""
@@ -67,7 +67,7 @@ class MainWindow(FluentWindow):
         self.resize(800, 600)
         self.setMinimumWidth(500)
         self.setWindowIcon(QIcon(':/qfluentwidgets/images/logo.png'))
-        self.setWindowTitle(f'BatchFileManager-{version}')
+        self.setWindowTitle(f'BatchFileManager-v{version}')
 
         # 创建启动界面
         self.splashScreen = SplashScreen(self.windowIcon(), self)

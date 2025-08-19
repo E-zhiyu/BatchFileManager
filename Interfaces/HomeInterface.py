@@ -569,7 +569,14 @@ class HomeInterface(QWidget):
         # 依次添加文件信息
         self.fileTableView.blockSignals(True)  # 阻断信号防止加载过程中保存表格信息
 
-        if cfg.get(cfg.appVersion) == version:
+        if self.versionCompare(cfg.get(cfg.appVersion).lstrip('v'), '1.1.0') < 0:  # 若上一次启动的版本号低于1.1.0，则升级数据结构
+            allFilePath = []
+            for i, row in enumerate(allRows):
+                for j, column in enumerate(row):
+                    if j == 3 or j == 5: continue  # 不加载修改日期和文件大小
+                    if j == 2: allFilePath.append(column)  # 获取文件路径
+                    self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+        else:  # 若以上判断均为否，则正常读取数据
             allFilePath = []
             for i, row in enumerate(allRows):
                 self.fileTableView.setItem(i, 0, QTableWidgetItem(row[0]))  # 文件名
@@ -577,13 +584,7 @@ class HomeInterface(QWidget):
                 self.fileTableView.setItem(i, 2, QTableWidgetItem(row[2]))  # 路径
                 self.fileTableView.setItem(i, 4, QTableWidgetItem(row[3]))  # 文件类型
                 allFilePath.append(row[2])
-        else:
-            allFilePath = []
-            for i, row in enumerate(allRows):
-                for j, column in enumerate(row):
-                    if j == 3 or j == 5: continue  # 不加载修改日期和文件大小
-                    if j == 2: allFilePath.append(column)  # 获取文件路径
-                    self.fileTableView.setItem(i, j, QTableWidgetItem(column))
+
 
         logging.info('开始刷新文件修改日期和大小……')
         getInfo_cnt = JarConnector('./backend/dateAndSizeGetter.jar', allFilePath)
@@ -607,3 +608,32 @@ class HomeInterface(QWidget):
             )
 
         self.fileTableView.blockSignals(False)
+
+    @staticmethod
+    def versionCompare(dataVersion, targetVersion):
+        """
+        版本比较方法
+        :param dataVersion: JSON数据版本号
+        :param targetVersion: 需要比较的版本号
+        :return: 0-相同，1-前者大于后者，-1-前者小于后者
+        """
+
+        jh, jm, jl = map(int, dataVersion.split('.'))
+        th, tm, tl = map(int, targetVersion.split('.'))
+
+        if jh > th:
+            return 1
+        elif jh < th:
+            return -1
+        else:
+            if jm > tm:
+                return 1
+            elif jm < tm:
+                return -1
+            else:
+                if jl > tl:
+                    return 1
+                elif jl < tl:
+                    return -1
+                else:
+                    return 0
