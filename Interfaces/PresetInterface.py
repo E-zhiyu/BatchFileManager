@@ -409,10 +409,10 @@ class PresetDataInputDialog(MessageBoxBase):
         # 基本布局设置
         self.layout = QHBoxLayout(self.widget)
         self.viewLayout.addLayout(self.layout)
-        controlWidget = QWidget()
+        controlWidget = QFrame()
         controlWidget.setFixedWidth(350)
         self.layout.addWidget(controlWidget, 0, Qt.AlignmentFlag.AlignLeft)
-        listWidget = QWidget()
+        listWidget = QFrame()
         listWidget.setFixedWidth(240)
         self.layout.addWidget(listWidget, 0, Qt.AlignmentFlag.AlignRight)
 
@@ -759,7 +759,7 @@ class PresetInterface(QWidget):
         # 卡片滚动区域
         self.cardScrollArea = SmoothScrollArea(self)
         self.mainLayout.addWidget(self.cardScrollArea)
-        self.cardWidget = QWidget(self)
+        self.cardWidget = QFrame(self)
         self.cardScrollArea.setWidget(self.cardWidget)
         self.cardScrollArea.setWidgetResizable(True)
 

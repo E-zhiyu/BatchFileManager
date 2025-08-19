@@ -2,7 +2,7 @@
 import os
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QHBoxLayout, QButtonGroup
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QHBoxLayout, QButtonGroup, QFrame
 
 from qfluentwidgets import (ScrollArea, SettingCardGroup, OptionsSettingCard, QConfig, FluentIcon, RadioButton,
                             CustomColorSettingCard, ExpandLayout, LineEdit,
@@ -206,7 +206,7 @@ class SettingInterface(QWidget):
         self.scrollArea = ScrollArea(self)
         self.widgetLayout.addWidget(self.scrollArea)
 
-        self.scrollWidget = QWidget(self.scrollArea)
+        self.scrollWidget = QFrame(self.scrollArea)
         self.scrollArea.enableTransparentBackground()
         self.scrollArea.setWidget(self.scrollWidget)
         self.scrollArea.setWidgetResizable(True)

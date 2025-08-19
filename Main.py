@@ -20,14 +20,14 @@ if cfg.get(cfg.dpiScale) != "Auto":
 def themeInit(theme: Theme = None):
     """应用主题初始化"""
     dark_style = """
-        QWidget {
+        QFrame {
             background-color: #2d2d2d;
             color: #ffffff;
             border-radius: 5px;
         }
         """
     light_style = """
-        QWidget {
+        QFrame {
             background-color: #f0f0f0;
             color: #000000;
             border-radius: 5px;
