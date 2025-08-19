@@ -653,10 +653,15 @@ class PresetDataInputDialog(MessageBoxBase):
         :param control: 待填充文件路径的控件
         """
 
+        if isinstance(control, LineEdit):
+            path = control.text()
+        else:
+            path = ''
+
         filePath = QFileDialog.getOpenFileName(
             None,
             '添加文件',
-            '',
+            path,
             '批处理和命令脚本 (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
         )[0]
         if not filePath:
