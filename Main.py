@@ -25,6 +25,9 @@ def themeInit(theme: Theme = None):
             color: #ffffff;
             border-radius: 5px;
         }
+        QLabel {
+            background-color: transparent
+        ;}
         """
     light_style = """
         QFrame {
@@ -32,6 +35,9 @@ def themeInit(theme: Theme = None):
             color: #000000;
             border-radius: 5px;
         }
+        QLabel {
+            background-color: transparent
+        ;}
         """
 
     if theme is None:

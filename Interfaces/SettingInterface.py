@@ -227,11 +227,6 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
         importBtn = PushButton('选择文件')
         importBtn.clicked.connect(self.importData)
 
-        # 将标签背景色改为透明
-        qss = 'BodyLabel{background-color:transparent;}'
-        exportLabel.setStyleSheet(qss)
-        importLabel.setStyleSheet(qss)
-
         # 将控件实例添加至布局
         self.add(exportLabel, exportBtn)
         self.add(importLabel, importBtn)
