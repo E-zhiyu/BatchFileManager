@@ -56,6 +56,8 @@ class HomeInterface(QWidget):
         # 加载已保存的文件内容
         self.loadContents()
 
+        cfg.fileDataChanged.connect(self.refreshFileTable)  # 将文件数据改变信号连接至刷新布局方法
+
     def __initControls(self):
         """初始化控件"""
 
@@ -514,6 +516,15 @@ class HomeInterface(QWidget):
 
             os.startfile(directory)
             logging.info('用户打开文件所在目录')
+
+    def refreshFileTable(self):
+        """刷新文件列表"""
+        self.fileTableView.blockSignals(True)
+        self.fileTableView.clear()
+        self.fileTableView.setHorizontalHeaderLabels(['文件名', '备注', '文件路径', '修改日期', '文件类型', '大小'])
+        self.fileTableView.blockSignals(False)
+
+        self.loadContents()
 
     def saveContents(self):
         """将表格的内容保存至文件"""

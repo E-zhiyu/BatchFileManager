@@ -1,13 +1,16 @@
 """设置界面模块"""
+import datetime
+import json
 import os
+import shutil
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QHBoxLayout, QButtonGroup, QFrame
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QHBoxLayout, QButtonGroup, QFrame, QDialog
 
 from qfluentwidgets import (ScrollArea, SettingCardGroup, OptionsSettingCard, QConfig, FluentIcon, RadioButton,
                             CustomColorSettingCard, ExpandLayout, LineEdit,
                             ToolButton, InfoBar, InfoBarPosition, ToolTipFilter, ToolTipPosition,
-                            SimpleExpandGroupSettingCard)
+                            SimpleExpandGroupSettingCard, BodyLabel, PushButton)
 
 from AppConfig.config import cfg
 
@@ -194,6 +197,145 @@ class JavaPathCard(SimpleExpandGroupSettingCard):
         self.pathLineEdit.blockSignals(False)
 
 
+class BackupRecoveryCard(SimpleExpandGroupSettingCard):
+    """
+    数据备份和恢复卡片
+
+    构造方法参数
+    ------------
+    * icon: 卡片图标
+    * title: 卡片标题
+    * content: 卡片描述
+    * source: 被操作的文件路径
+    * defaultName: 导出的默认文件名
+    * importSignal: 导入数据时触发的信号
+    * parentWindow: 所属的父界面
+    """
+
+    def __init__(self, icon: FluentIcon, title, content, source, defaultName, importSignal: pyqtSignal, parentWindow):
+        super().__init__(icon, title, content, parentWindow)
+        self.source = source
+        self.defaultName = defaultName
+        self.importSignal = importSignal
+        self.parentWindow = parentWindow
+
+        # 创建控件实例
+        exportLabel = BodyLabel('导出数据')
+        exportBtn = PushButton('选择位置')
+        exportBtn.clicked.connect(self.exportData)
+        importLabel = BodyLabel('导入数据')
+        importBtn = PushButton('选择文件')
+        importBtn.clicked.connect(self.importData)
+
+        # 将标签背景色改为透明
+        qss = 'BodyLabel{background-color:transparent;}'
+        exportLabel.setStyleSheet(qss)
+        importLabel.setStyleSheet(qss)
+
+        # 将控件实例添加至布局
+        self.add(exportLabel, exportBtn)
+        self.add(importLabel, importBtn)
+
+    def add(self, label, control):
+        """
+        添加配置项到折叠区域
+        :param label: 左侧标题标签
+        :param control: 右侧功能控件
+        """
+        w = QWidget()
+        w.setFixedHeight(60)
+
+        layout = QHBoxLayout(w)
+        layout.setContentsMargins(48, 0, 48, 12)
+
+        layout.addWidget(label, 0, Qt.AlignmentFlag.AlignLeft)
+        if control is not None:
+            layout.addStretch(1)
+            layout.addWidget(control)
+
+        self.addGroupWidget(w)  # 将组合后的容器添加到卡片布局中
+
+    def exportData(self):
+        """导出数据方法"""
+        w = QFileDialog(
+            self,
+            '数据导出',
+            '',
+            'JSON文件 (*.json)'
+        )
+        w.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)  # 对话框设置为保存文件模式
+        default_name = datetime.datetime.now().strftime('%Y-%m-%d-') + self.defaultName
+        w.selectFile(default_name)
+
+        if w.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        target_path = w.selectedFiles()[0]
+        try:
+            shutil.copyfile(self.source, target_path)
+            InfoBar.success(
+                '成功',
+                '数据已成功导出',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+        except FileNotFoundError:
+            InfoBar.error(
+                '失败',
+                '数据文件不存在',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+
+    def importData(self):
+        """恢复数据方法"""
+        file_path = QFileDialog.getOpenFileName(
+            self,
+            '数据导入',
+            '',
+            'JSON文件 (*.json)'
+        )[0]
+        if not file_path:
+            return
+
+        # 判断文件是否存在（避免用户移除文件）
+        if not os.path.isfile(file_path):
+            InfoBar.error(
+                '失败',
+                '待导入的文件不存在',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            return
+
+        # 判断文件内容
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = json.load(f)
+            if not isinstance(content, list):
+                InfoBar.error(
+                    '失败',
+                    '文件内容格式错误',
+                    position=InfoBarPosition.TOP,
+                    duration=1500,
+                    parent=self.parentWindow
+                )
+                return
+
+        # 复制文件内容
+        shutil.copyfile(file_path, self.source)
+        self.importSignal.emit()
+        InfoBar.success(
+            '成功',
+            '数据已成功导入',
+            position=InfoBarPosition.TOP,
+            duration=1500,
+            parent=self.parentWindow
+        )
+
+
 class SettingInterface(QWidget):
     """设置界面类"""
 
@@ -221,7 +363,7 @@ class SettingInterface(QWidget):
     def initControls(self):
         """初始化控件"""
 
-        """个性化设置项"""
+        """个性化设置组"""
         self.personalizationGroup = SettingCardGroup('个性化', self.scrollWidget)
         self.viewLayout.addWidget(self.personalizationGroup)
 
@@ -249,10 +391,23 @@ class SettingInterface(QWidget):
         )
         self.personalizationGroup.addSettingCard(self.themeColorCard)
 
-        """运行环境项"""
+        """运行环境组"""
         self.environmentGroup = SettingCardGroup("运行环境", self.scrollWidget)
         self.viewLayout.addWidget(self.environmentGroup)
 
         # 修改Java路径
         self.javaPathCard = JavaPathCard(parent=self)
         self.environmentGroup.addSettingCard(self.javaPathCard)
+
+        """软件数据组"""
+        self.softwareDataGroup = SettingCardGroup('软件数据', self.scrollWidget)
+        self.viewLayout.addWidget(self.softwareDataGroup)
+
+        self.fileDataCard = BackupRecoveryCard(FluentIcon.FOLDER, '文件数据', '备份或恢复保存的文件信息',
+                                               './config/fileTableContents.json', 'fileContents.json',
+                                               cfg.fileDataChanged, self)
+        self.softwareDataGroup.addSettingCard(self.fileDataCard)
+
+        self.presetDataCard = BackupRecoveryCard(FluentIcon.EMOJI_TAB_SYMBOLS, '预设数据', '备份或恢复文件预设',
+                                                 './config/presets.json', 'presets.json', cfg.presetDataChanged, self)
+        self.softwareDataGroup.addSettingCard(self.presetDataCard)

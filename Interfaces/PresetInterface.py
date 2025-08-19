@@ -716,6 +716,7 @@ class PresetDataInputDialog(MessageBoxBase):
             )
         return flag
 
+
 class PresetInterface(QWidget):
     """文件预设界面类"""
 
@@ -735,6 +736,8 @@ class PresetInterface(QWidget):
 
         self.initControls()  # 初始化控件
         self.loadPreset()  # 加载预设卡片
+
+        cfg.presetDataChanged.connect(self.refreshPresetView)  # 将预设数据改变信号连接至刷新布局方法
 
     def initControls(self):
         """初始化控件"""
@@ -894,8 +897,18 @@ class PresetInterface(QWidget):
 
     def showHelp(self):
         """显示帮助信息窗口"""
-        w = TextMessageBox('预设说明',style_introduction,self.parentWindow)
+        w = TextMessageBox('预设说明', style_introduction, self.parentWindow)
         w.exec()
+
+    def refreshPresetView(self):
+        """刷新文件预设"""
+        while self.cardLayout.count():
+            item = self.cardLayout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        self.cardList.clear()
+
+        self.loadPreset()
 
     def loadPreset(self):
         """加载保存到文件的预设"""
