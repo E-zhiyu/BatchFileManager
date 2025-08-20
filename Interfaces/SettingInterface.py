@@ -87,13 +87,12 @@ class JavaPathCard(SimpleExpandGroupSettingCard):
 
         self.addGroupWidget(w)  # 将组合后的容器添加到卡片布局中
 
-    def verifyJavaPath(self, path: str):
+    def __applyJavaPath(self, path: str):
         """
-        验证自定义Java路径并修改配置项
+        应用自定义Java路径并修改配置项
         :param path: 需要验证的Java路径
-        :return:通过-True，不通过-False
         """
-
+        logging.info('开始验证Java路径有效性……')
         path = path.strip('\"')
 
         if os.path.isfile(path):
@@ -107,18 +106,18 @@ class JavaPathCard(SimpleExpandGroupSettingCard):
                 duration=1500,
                 parent=self.parentWindow
             )
-            return True
+            logging.info('Java路径验证通过')
         else:
             cfg.set(cfg.useCustomJavaPath, False)
-            self.card.setContent('Java路径错误')
+            self.card.setContent('自定义Java路径错误，已使用环境变量指示的Java路径代替')
             InfoBar.error(
                 '错误',
-                'Java路径错误',
+                'Java路径错误，已使用环境变量指示的Java路径代替',
                 position=InfoBarPosition.TOP,
                 duration=1500,
                 parent=self.parentWindow
             )
-            return False
+            logging.warning('Java路径验证不通过，已自动切换至环境变量')
 
     def __onIdClicked(self, btn_id):
         """
@@ -127,6 +126,7 @@ class JavaPathCard(SimpleExpandGroupSettingCard):
         """
 
         if btn_id == 0:
+            logging.info('更改Java路径：遵从环境变量')
             cfg.set(cfg.useCustomJavaPath, False)
             self.card.setContent('由环境变量决定')
 
@@ -144,7 +144,8 @@ class JavaPathCard(SimpleExpandGroupSettingCard):
             self.pathBtn.setEnabled(True)
 
             customJavaPath = self.pathLineEdit.text().strip('\"')
-            self.verifyJavaPath(customJavaPath)
+            logging.info(f'更改Java路径："{customJavaPath}"')
+            self.__applyJavaPath(customJavaPath)
 
     def __onPathBtnClicked(self):
         """路径按钮按下后的响应方法"""
@@ -162,17 +163,20 @@ class JavaPathCard(SimpleExpandGroupSettingCard):
         )[0]
 
         if java_path:
+            logging.info(f'更改Java路径："{java_path}"')
+
             self.pathLineEdit.blockSignals(True)
             self.pathLineEdit.setText(java_path)
             self.pathLineEdit.setCursorPosition(0)  # 设置光标位置以从头部显示路径
             self.pathLineEdit.blockSignals(False)
 
-            self.verifyJavaPath(java_path)
+            self.__applyJavaPath(java_path)
 
     def __onTextChanged(self):
         """路径输入框文本改变的响应方法"""
         java_path = self.pathLineEdit.text().strip('\"')
-        self.verifyJavaPath(java_path)
+        logging.info(f'更改Java路径："{java_path}"')
+        self.__applyJavaPath(java_path)
 
     def __loadStatus(self):
         """加载配置文件内容并设置控件状态"""

@@ -27,7 +27,7 @@ class JarConnector:
             stderr=subprocess.PIPE,
             text=True
         )
-        logging.info(f"JarConnector成功创建子进程，目标：{self.target}")
+        logging.info(f'JarConnector成功创建子进程，目标："{self.target}"')
 
         self.__sendData()
 
@@ -42,7 +42,7 @@ class JarConnector:
 
     def receiveData(self):
         """从Java子进程读取标准输出中的数据"""
-        logging.info('JarConnector尝试接收数据')
+        logging.info('JarConnector尝试接收数据……')
         json_data = self.java_process.stdout.readline()
         try:
             data = json.loads(json_data)

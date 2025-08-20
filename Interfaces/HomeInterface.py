@@ -528,6 +528,7 @@ class HomeInterface(QWidget):
 
     def saveContents(self):
         """将表格的内容保存至文件"""
+        logging.info('开始保存文件数据……')
 
         # 获取表格内容
         allRows = []
@@ -548,6 +549,8 @@ class HomeInterface(QWidget):
 
         with open('./config/fileTableContents.json', 'w', encoding='utf-8') as f:
             json.dump(allRows, f, ensure_ascii=False, indent=4)
+
+        logging.info('文件数据保存成功')
 
     def loadContents(self):
         """加载已保存的文件内容"""
@@ -590,12 +593,12 @@ class HomeInterface(QWidget):
         getInfo_cnt = JarConnector('./backend/dateAndSizeGetter.jar', allFilePath)
         allInfos = getInfo_cnt.receiveData()
         if allInfos:
-            logging.info('刷新成功')
+            logging.info('文件修改日期和大小刷新成功')
             for rowIndex, fileInfo in enumerate(allInfos):
                 self.fileTableView.setItem(rowIndex, 3, QTableWidgetItem(fileInfo[0]))
                 self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[1]))
         else:
-            logging.warning('刷新失败')
+            logging.warning('文件修改日期和大小刷新失败')
             for i in range(self.fileTableView.rowCount()):
                 self.fileTableView.setItem(i, 3, QTableWidgetItem('未知'))
                 self.fileTableView.setItem(i, 5, QTableWidgetItem('未知'))

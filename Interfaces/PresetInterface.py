@@ -782,8 +782,11 @@ class PresetInterface(QWidget):
         :param cardIndex: 指定的卡片下标（-1为取消选中）
         """
         if self.currentCardIndex == cardIndex:  # 点击当前卡片则取消选中
+            logging.info('用户取消选中卡片')
             self.changeCurrentCard(-1)
             return
+        else:
+            logging.info(f'用户选中下标为{cardIndex}的卡片')
 
         if self.currentCardIndex != -1:
             last = self.currentCardIndex
@@ -798,6 +801,7 @@ class PresetInterface(QWidget):
         """添加新预设"""
         w = PresetDataInputDialog(True, parent=self.parentWindow)
         if w.exec():
+            logging.info('正在添加新的预设卡片……')
             title, content, style, fileData = w.getPresetData()
             if not fileData:
                 InfoBar.error(
@@ -807,11 +811,15 @@ class PresetInterface(QWidget):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                logging.error('获取预设信息时出错')
                 return
 
             new_card = PresetCard(title, content, style, len(self.cardList), self)
             new_card.setFile(fileData)
             self.addNewCard(new_card)
+            self.savePreset()  # 操作结束即保存预设
+
+            logging.info('新的预设卡片已添加')
 
     def deletePreset(self):
         """删除预设"""
@@ -849,15 +857,18 @@ class PresetInterface(QWidget):
             )
             return
 
+        logging.info('获取当前预设卡片信息中……')
         cardStyle = self.cardList[self.currentCardIndex].getStyle()
         title = self.cardList[self.currentCardIndex].title
         content = self.cardList[self.currentCardIndex].content
         presetData = self.cardList[self.currentCardIndex].getPresetData()
+        logging.info('预设信息获取成功')
 
         w = PresetDataInputDialog(False, cardStyle, self.parentWindow, title, content, presetData)
         if not w.exec():
             return
 
+        logging.info('应用新的预设信息中……')
         title, content, style, fileData = w.getPresetData()
         if not fileData:
             InfoBar.error(
@@ -867,6 +878,7 @@ class PresetInterface(QWidget):
                 duration=1500,
                 parent=self.parentWindow
             )
+            logging.error('获取新预设信息失败')
             return
 
         # 实例化新卡片
@@ -884,6 +896,7 @@ class PresetInterface(QWidget):
 
         self.savePreset()  # 保存预设变更
         self.changeCurrentCard(-1)  # 将当前卡片下标复位
+        logging.info('成功应用新的预设信息')
 
     def addNewCard(self, card: PresetCard):
         """
@@ -893,7 +906,6 @@ class PresetInterface(QWidget):
         card.clicked.connect(self.changeCurrentCard)
         self.cardLayout.addWidget(card)
         self.cardList.append(card)
-        self.savePreset()  # 操作结束即保存预设
 
     def showHelp(self):
         """显示帮助信息窗口"""
@@ -902,6 +914,7 @@ class PresetInterface(QWidget):
 
     def refreshPresetView(self):
         """刷新文件预设"""
+        logging.info('开始刷新预设布局……')
         while self.cardLayout.count():
             item = self.cardLayout.takeAt(0)
             if item.widget():
@@ -909,9 +922,11 @@ class PresetInterface(QWidget):
         self.cardList.clear()
 
         self.loadPreset()
+        logging.info('预设布局刷新成功')
 
     def loadPreset(self):
         """加载保存到文件的预设"""
+        logging.info("加载预设中……")
         try:
             with open('./config/presets.json', 'r', encoding='utf-8') as f:
                 json_data = json.load(f)
@@ -942,9 +957,11 @@ class PresetInterface(QWidget):
                 new_card.setFile(fileList)
 
             self.addNewCard(new_card)
+        logging.info('预设加载成功')
 
     def savePreset(self):
         """将预设保存至文件"""
+        logging.info('保存预设中……')
         allPresets = []
 
         for presetCard in self.cardList:
@@ -958,3 +975,5 @@ class PresetInterface(QWidget):
 
         with open('./config/presets.json', 'w', encoding='utf-8') as f:
             json.dump(allPresets, f, ensure_ascii=False, indent=4)
+
+        logging.info('预设保存成功')

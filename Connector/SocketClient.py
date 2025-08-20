@@ -85,7 +85,7 @@ class SocketClient(QObject):
             logging.info(f'用户输入命令：{cmd}')
         else:
             cmd = custom_cmd
-            logging.info(f'尝试结束进程')
+            logging.info(f'尝试结束文件运行进程')
 
         if cmd and self.running:
             with QMutexLocker(self.mutex):
@@ -102,16 +102,17 @@ class SocketClient(QObject):
                     parent=self.parent.parentWindow
                 )
         elif not self.running:
-            InfoBar.error(
-                "错误",
+            InfoBar.warning(
+                "提示",
                 '没有正在运行的文件',
                 duration=1500,
                 position=InfoBarPosition.TOP,
                 parent=self.parent.parentWindow
             )
+            logging.warning('没有正在运行的文件，无需发送命令')
         elif not cmd:
             InfoBar.warning(
-                "警告",
+                "提示",
                 '不能发送空命令',
                 duration=1500,
                 position=InfoBarPosition.TOP,

@@ -14,6 +14,7 @@ from qfluentwidgets import FluentWindow, NavigationItemPosition, SplashScreen, D
 from qfluentwidgets import FluentIcon as FIF
 
 from Interfaces import version
+from Logs.log_recorder import logging
 
 
 class MainWindow(FluentWindow):
@@ -84,7 +85,7 @@ class MainWindow(FluentWindow):
 
     def closeEvent(self, event):
         """重写关闭事件"""
-
+        logging.info('开始关闭程序……')
         cfg.set(cfg.appVersion, version)  # 更新应用版本号
 
         # 检测是否有程序正在运行并弹出对话框
