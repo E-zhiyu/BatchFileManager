@@ -13,6 +13,7 @@ from qfluentwidgets import (ScrollArea, SettingCardGroup, OptionsSettingCard, QC
                             SimpleExpandGroupSettingCard, BodyLabel, PushButton)
 
 from AppConfig.config import cfg
+from Logs.log_recorder import logging
 
 
 class JavaPathCard(SimpleExpandGroupSettingCard):
@@ -265,6 +266,7 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
         if w.exec() != QDialog.DialogCode.Accepted:
             return
 
+        logging.info(f'源"{self.source}"开始导出数据……')
         target_path = w.selectedFiles()[0]
         try:
             shutil.copyfile(self.source, target_path)
@@ -275,6 +277,7 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
                 duration=1500,
                 parent=self.parentWindow
             )
+            logging.info('数据导出成功')
         except FileNotFoundError:
             InfoBar.error(
                 '失败',
@@ -283,6 +286,7 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
                 duration=1500,
                 parent=self.parentWindow
             )
+            logging.error('数据导出失败')
 
     def importData(self):
         """恢复数据方法"""
@@ -295,6 +299,7 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
         if not file_path:
             return
 
+        logging.info(f'源"{self.source}"开始导入数据……')
         # 判断文件是否存在（避免用户移除文件）
         if not os.path.isfile(file_path):
             InfoBar.error(
@@ -304,12 +309,13 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
                 duration=1500,
                 parent=self.parentWindow
             )
+            logging.error('导入失败：待导入的文件不存在')
             return
 
         # 判断文件内容
         with open(file_path, 'r', encoding='utf-8') as f:
             content = json.load(f)
-            if not isinstance(content, list):
+            if not self.dataValidator(content):
                 InfoBar.error(
                     '失败',
                     '文件内容格式错误',
@@ -317,6 +323,7 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
                     duration=1500,
                     parent=self.parentWindow
                 )
+                logging.error('导入失败：文件格式错误')
                 return
 
         # 复制文件内容
@@ -329,6 +336,80 @@ class BackupRecoveryCard(SimpleExpandGroupSettingCard):
             duration=1500,
             parent=self.parentWindow
         )
+        logging.info('数据导入成功')
+
+    @staticmethod
+    def dataValidator(data_content) -> bool:
+        """
+        数据验证抽象方法
+        :param data_content: 需要验证的数据内容
+        :return 验证结果
+        """
+        return True
+
+
+class FileBakRecCard(BackupRecoveryCard):
+    """
+    文件表格备份和恢复设置卡片
+
+    构造方法参数
+    ------------
+    * icon: 卡片图标
+    * title: 卡片标题
+    * content: 卡片描述
+    * source: 被操作的文件路径
+    * defaultName: 导出的默认文件名
+    * importSignal: 导入数据时触发的信号
+    * parentWindow: 所属的父界面
+    """
+
+    @staticmethod
+    def dataValidator(data_content) -> bool:
+        """
+        重写数据验证方法
+        :param data_content: 需要验证的数据内容
+        :return: 数据验证结果
+        """
+
+        for file in data_content:
+            for fileInfo in file:
+                if not isinstance(fileInfo, str):
+                    return False
+        return True
+
+
+class PresetBakRecCard(BackupRecoveryCard):
+    """
+    预设备份和恢复卡片
+
+    构造方法参数
+    ------------
+    * icon: 卡片图标
+    * title: 卡片标题
+    * content: 卡片描述
+    * source: 被操作的文件路径
+    * defaultName: 导出的默认文件名
+    * importSignal: 导入数据时触发的信号
+    * parentWindow: 所属的父界面
+    """
+
+    @staticmethod
+    def dataValidator(data_content) -> bool:
+        """
+        重写导入数据的验证方法
+        :param data_content: 待验证的数据内容
+        :return: 验证结果
+        """
+
+        for preset in data_content:
+            for i, presetInfo in enumerate(preset):
+                if i < 3:
+                    if not isinstance(presetInfo, str):
+                        return False
+                else:
+                    if not isinstance(presetInfo, list):
+                        return False
+        return True
 
 
 class SettingInterface(QWidget):
@@ -398,11 +479,11 @@ class SettingInterface(QWidget):
         self.softwareDataGroup = SettingCardGroup('软件数据', self.scrollWidget)
         self.viewLayout.addWidget(self.softwareDataGroup)
 
-        self.fileDataCard = BackupRecoveryCard(FluentIcon.FOLDER, '文件数据', '备份或恢复保存的文件信息',
-                                               './config/fileTableContents.json', 'fileContents.json',
-                                               cfg.fileDataChanged, self)
+        self.fileDataCard = FileBakRecCard(FluentIcon.FOLDER, '文件数据', '备份或恢复保存的文件信息',
+                                           './config/fileTableContents.json', 'fileContents.json',
+                                           cfg.fileDataChanged, self)
         self.softwareDataGroup.addSettingCard(self.fileDataCard)
 
-        self.presetDataCard = BackupRecoveryCard(FluentIcon.EMOJI_TAB_SYMBOLS, '预设数据', '备份或恢复文件预设',
-                                                 './config/presets.json', 'presets.json', cfg.presetDataChanged, self)
+        self.presetDataCard = PresetBakRecCard(FluentIcon.EMOJI_TAB_SYMBOLS, '预设数据', '备份或恢复文件预设',
+                                               './config/presets.json', 'presets.json', cfg.presetDataChanged, self)
         self.softwareDataGroup.addSettingCard(self.presetDataCard)
