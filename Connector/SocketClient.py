@@ -80,6 +80,10 @@ class SocketClient(QObject):
 
     def send_command(self, custom_cmd: str = ''):
         """将命令放入队列(由发送线程处理)"""
+        cursor = self.outputTextEdit.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)  # 将光标移动至末尾
+        self.outputTextEdit.setTextCursor(cursor)
+
         if not custom_cmd:
             cmd = self.userCommandControl.text()
             logging.info(f'用户输入命令：{cmd}')
