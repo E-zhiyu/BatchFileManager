@@ -191,6 +191,10 @@ class SocketClient(QObject):
 
     def updateGUI(self):
         """将输出内容队列中的内容合并后更新GUI"""
+        cursor = self.outputTextEdit.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)  # 将光标移动至末尾
+        self.outputTextEdit.setTextCursor(cursor)
+
         with QMutexLocker(self.mutex):
             if not self.output_queue:
                 return
