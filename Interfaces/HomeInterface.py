@@ -290,11 +290,11 @@ class HomeInterface(QWidget):
         重定向文件
         :param row:需要重定向的文件条目所在的行下标
         """
-
+        old_path = self.fileTableView.item(row, 2).text()
         filePath = QFileDialog.getOpenFileName(
             None,
             '添加文件',
-            '',
+            os.path.dirname(old_path),
             '批处理和命令脚本 (*.bat *.cmd);;批处理文件 (*.bat);;命令脚本 (*.cmd)'
         )[0]
         if not filePath:
