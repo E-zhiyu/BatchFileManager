@@ -535,7 +535,7 @@ class HomeInterface(QWidget):
         for row in range(self.fileTableView.rowCount()):
             oneRow = []
             for column in range(self.fileTableView.columnCount()):
-                if column == 3 or column == 5: continue  # 不记录修改日期和文件大小
+                if column >= 3: continue  # 不记录修改日期、文件类型和文件大小
                 item = self.fileTableView.item(row, column)
                 try:
                     oneRow.append(item.text())
@@ -585,18 +585,17 @@ class HomeInterface(QWidget):
                 self.fileTableView.setItem(i, 0, QTableWidgetItem(row[0]))  # 文件名
                 self.fileTableView.setItem(i, 1, QTableWidgetItem(row[1]))  # 备注
                 self.fileTableView.setItem(i, 2, QTableWidgetItem(row[2]))  # 路径
-                self.fileTableView.setItem(i, 4, QTableWidgetItem(row[3]))  # 文件类型
                 allFilePath.append(row[2])
 
-
         logging.info('开始刷新文件修改日期和大小……')
-        getInfo_cnt = JarConnector('./backend/dateAndSizeGetter.jar', allFilePath)
+        getInfo_cnt = JarConnector('./backend/fileInfoGetter.jar', allFilePath)
         allInfos = getInfo_cnt.receiveData()
         if allInfos:
             logging.info('文件修改日期和大小刷新成功')
             for rowIndex, fileInfo in enumerate(allInfos):
                 self.fileTableView.setItem(rowIndex, 3, QTableWidgetItem(fileInfo[0]))
-                self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[1]))
+                self.fileTableView.setItem(rowIndex, 4, QTableWidgetItem(fileInfo[1]))
+                self.fileTableView.setItem(rowIndex, 5, QTableWidgetItem(fileInfo[2]))
         else:
             logging.warning('文件修改日期和大小刷新失败')
             for i in range(self.fileTableView.rowCount()):

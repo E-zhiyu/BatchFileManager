@@ -16,7 +16,7 @@ import java.util.List;
 import PythonConnector.GrandProcessConnector;
 
 
-public class DateAndSizeGetter implements GrandProcessConnector<List<String>, List<List<String>>> {
+public class FileInfoGetter implements GrandProcessConnector<List<String>, List<List<String>>> {
     @Override
     public List<String> receiveData() {
         List<String> filePaths = new ArrayList<>();
@@ -55,8 +55,10 @@ public class DateAndSizeGetter implements GrandProcessConnector<List<String>, Li
 
         for (String filePath : filePaths) {
             Path path = Paths.get(filePath);
-            String size, date;
+            String size, date, extension;
             size = date = "未知";
+            extension = filePath.substring(filePath.lastIndexOf(".") + 1);
+
             try {
                 BasicFileAttributes attr = Files.readAttributes(path, BasicFileAttributes.class);
 
@@ -79,6 +81,7 @@ public class DateAndSizeGetter implements GrandProcessConnector<List<String>, Li
             } finally {
                 List<String> oneFileInfo = new ArrayList<>();
                 oneFileInfo.add(date);
+                oneFileInfo.add(extension);
                 oneFileInfo.add(size);
                 dateAndSize.add(oneFileInfo);
             }
@@ -88,11 +91,11 @@ public class DateAndSizeGetter implements GrandProcessConnector<List<String>, Li
     }
 
     public static void main(String[] args) {
-        DateAndSizeGetter dateAndSizeGetter = new DateAndSizeGetter();
-        List<String> filePaths = dateAndSizeGetter.receiveData();
+        FileInfoGetter fileInfoGetter = new FileInfoGetter();
+        List<String> filePaths = fileInfoGetter.receiveData();
         if (!filePaths.isEmpty()) {
-            List<List<String>> dateAndSize = dateAndSizeGetter.getDateAndSize(filePaths);
-            dateAndSizeGetter.sendData(dateAndSize);
+            List<List<String>> dateAndSize = fileInfoGetter.getDateAndSize(filePaths);
+            fileInfoGetter.sendData(dateAndSize);
         }
     }
 }
