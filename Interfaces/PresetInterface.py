@@ -167,7 +167,8 @@ class PresetCard(CardWidget):
         :return: Java后端应答情况（文件是否正确运行）
         """
         cmdInterface = self.parentInterface.parentWindow.cmdInterface
-        running_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
+        running_cnt = JarConnector('./backend/fileRunner.jar')
+        running_cnt.sendData([filePath])
         ack = running_cnt.receiveData()
 
         if ack:
@@ -973,7 +974,14 @@ class PresetInterface(QWidget):
             onePresetCardInfo = [title, content, style, presetData]
             allPresets.append(onePresetCardInfo)
 
-        with open('./config/presets.json', 'w', encoding='utf-8') as f:
-            json.dump(allPresets, f, ensure_ascii=False, indent=4)
+        jsonWriter_cnt = JarConnector('./backend/jsonWriter.jar')
+        jsonWriter_cnt.sendData(['./config/presets.json'], allPresets)
+        flag = jsonWriter_cnt.receiveData()
 
-        logging.info('预设保存成功')
+        # with open('./config/presets.json', 'w', encoding='utf-8') as f:
+        #  json.dump(allPresets, f, ensure_ascii=False, indent=4)
+
+        if flag:
+            logging.info('预设保存成功')
+        else:
+            logging.warning('预设保存失败')

@@ -10,12 +10,10 @@ class JarConnector:
     """
     连接.jar文件的类
     :param target：需要运行的.jar文件
-    :param sent_data：需要发送的参数（要能被JSON格式化）
     """
 
-    def __init__(self, target: str, sent_data: (list, dict, set)):
+    def __init__(self, target: str):
         self.target = target  # 目标.jar文件路径
-        self.sent_data = sent_data  # 需要发送的数据
         self.custom_java_path = cfg.get(cfg.customJavaPath)
 
         # 启动Java进程
@@ -29,14 +27,16 @@ class JarConnector:
         )
         logging.info(f'JarConnector成功创建子进程，目标："{self.target}"')
 
-        self.__sendData()
-
-    def __sendData(self):
-        """通过标准输入向Java子进程发送数据"""
+    def sendData(self, *data):
+        """
+        通过标准输入向Java子进程发送数据
+        :param data: 待发送的数据（不需要换行符）
+        """
         # 将列表转换为JSON字符串并发送
-        json_data = json.dumps(self.sent_data)
-        self.java_process.stdin.write(json_data + '\n')  # 添加换行符作为结束标记
-        self.java_process.stdin.flush()  # 确保数据被发送
+        for d in data:
+            json_data = json.dumps(d)
+            self.java_process.stdin.write(json_data + '\n')  # 添加换行符作为结束标记
+            self.java_process.stdin.flush()  # 确保数据被发送
         self.java_process.stdin.close()
         logging.info('JarConnector成功发送数据')
 

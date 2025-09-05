@@ -254,7 +254,8 @@ class HomeInterface(QWidget):
             remark = remark.lstrip('（已失效）')
             self.fileTableView.setItem(self.fileTableView.currentRow(), 1, QTableWidgetItem(remark))
 
-        running_cnt = JarConnector('./backend/fileRunner.jar', [filePath])
+        running_cnt = JarConnector('./backend/fileRunner.jar')
+        running_cnt.sendData([filePath])
         ack = running_cnt.receiveData()
         if not ack:
             InfoBar.error(
@@ -300,7 +301,8 @@ class HomeInterface(QWidget):
         if not filePath:
             return
 
-        redirect_cnt = JarConnector('./backend/fileAdder.jar', [filePath])
+        redirect_cnt = JarConnector('./backend/fileAdder.jar')
+        redirect_cnt.sendData([filePath])
         fileInfos = redirect_cnt.receiveData()[0]
 
         self.fileTableView.blockSignals(True)
@@ -341,7 +343,8 @@ class HomeInterface(QWidget):
             return
 
         logging.info('开始添加文件……')
-        fileAdd_cnt = JarConnector('./backend/fileAdder.jar', files)
+        fileAdd_cnt = JarConnector('./backend/fileAdder.jar')
+        fileAdd_cnt.sendData(files)
         file_infos = fileAdd_cnt.receiveData()  # [[文件名,修改日期,后缀名,文件大小],...]
         if file_infos is None or file_infos[0] is None:  # 判断是否接受None或者第一个元素是否为空
             InfoBar.error(
@@ -588,7 +591,8 @@ class HomeInterface(QWidget):
                 allFilePath.append(row[2])
 
         logging.info('开始刷新文件修改日期和大小……')
-        getInfo_cnt = JarConnector('./backend/fileInfoGetter.jar', allFilePath)
+        getInfo_cnt = JarConnector('./backend/fileInfoGetter.jar')
+        getInfo_cnt.sendData(allFilePath)
         allInfos = getInfo_cnt.receiveData()
         if allInfos:
             logging.info('文件修改日期和大小刷新成功')
