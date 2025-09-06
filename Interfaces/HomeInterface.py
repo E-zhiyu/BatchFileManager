@@ -1,5 +1,4 @@
 """主页模块"""
-import json
 import os
 
 from PyQt6.QtCore import Qt, QPoint
@@ -12,7 +11,6 @@ from qfluentwidgets import FluentIcon as FIF
 from AppConfig.config import cfg
 from Connector.JarConnector import JarConnector
 from Logs.log_recorder import logging
-from Interfaces import version
 
 
 class FileTabel(TableWidget):
@@ -550,20 +548,34 @@ class HomeInterface(QWidget):
         if not os.path.isdir('./config'):
             os.mkdir('./config')
 
-        with open('./config/fileTableContents.json', 'w', encoding='utf-8') as f:
-            json.dump(allRows, f, ensure_ascii=False, indent=4)
+        jsonWriter_cnt = JarConnector('./backend/jsonWriter.jar')
+        jsonWriter_cnt.sendData(['./config/fileTableContents.json'], allRows)
+        flag = jsonWriter_cnt.receiveData()
 
-        logging.info('文件数据保存成功')
+        if flag:
+            logging.info('文件数据保存成功')
+        else:
+            logging.error('文件数据保存失败')
 
     def loadContents(self):
         """加载已保存的文件内容"""
+        logging.info('开始读取已保存的文件信息……')
 
-        try:
-            with open('./config/fileTableContents.json', 'r', encoding='utf-8') as f:
-                allRows = json.load(f)
-        except FileNotFoundError:
+        jsonReader_cnt = JarConnector('./backend/jsonReader.jar')
+        jsonReader_cnt.sendData(['./config/fileTableContents.json'])
+        allRows = jsonReader_cnt.receiveData()
+        if not allRows:
+            InfoBar.error(
+                '错误',
+                '文件信息读取出错，请检查Java版本',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            logging.error('文件信息读取失败')
             return
 
+        logging.info('文件信息读取成功')
         # 检测文件是否存在
         for rowIndex, fileInfo in enumerate(allRows):
             if not os.path.isfile(fileInfo[2]) and not allRows[rowIndex][1].startswith('（已失效）'):

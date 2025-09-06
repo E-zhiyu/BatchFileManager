@@ -30,7 +30,7 @@ class JarConnector:
     def sendData(self, *data):
         """
         通过标准输入向Java子进程发送数据
-        :param data: 待发送的数据（不需要换行符）
+        :param data: 待发送的数据列表（不需要换行符）
         """
         # 将列表转换为JSON字符串并发送
         for d in data:

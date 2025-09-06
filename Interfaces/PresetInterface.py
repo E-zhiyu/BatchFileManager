@@ -942,15 +942,20 @@ class PresetInterface(QWidget):
         logging.info("加载预设中……")
         jsonReader_cnt = JarConnector('./backend/jsonReader.jar')
         jsonReader_cnt.sendData(['./config/presets.json'])
-        json_data = jsonReader_cnt.receiveData()
+        preset_json_data = jsonReader_cnt.receiveData()
+        if not preset_json_data:
+            InfoBar.error(
+                '错误',
+                '预设加载出错,请检查Java版本',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
+            logging.error('预设加载出错')
+            return
 
-        """try:
-            with open('./config/presets.json', 'r', encoding='utf-8') as f:
-                json_data = json.load(f)
-        except FileNotFoundError:
-            return"""
-
-        for index, preset in enumerate(json_data):
+        logging.info('预设加载成功')
+        for index, preset in enumerate(preset_json_data):
             title = preset[0]
             content = preset[1]
             try:
@@ -994,10 +999,7 @@ class PresetInterface(QWidget):
         jsonWriter_cnt.sendData(['./config/presets.json'], allPresets)
         flag = jsonWriter_cnt.receiveData()
 
-        # with open('./config/presets.json', 'w', encoding='utf-8') as f:
-        #  json.dump(allPresets, f, ensure_ascii=False, indent=4)
-
         if flag:
             logging.info('预设保存成功')
         else:
-            logging.warning('预设保存失败')
+            logging.error('预设保存失败')
