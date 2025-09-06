@@ -984,8 +984,12 @@ class PresetInterface(QWidget):
     def savePreset(self):
         """将预设保存至文件"""
         logging.info('保存预设中……')
-        allPresets = []
 
+        if not cfg.get(cfg.isOpeningJavaPathCorrect):
+            logging.warning('由于程序启动时Java路径有误，故不保存预设内容')
+            return
+
+        allPresets = []
         for presetCard in self.cardList:
             title = presetCard.title
             content = presetCard.content

@@ -7,7 +7,7 @@ from qfluentwidgets import (qconfig, QConfig, ConfigItem, BoolValidator)
 class Config(QConfig):
     """应用配置项和配置信号"""
 
-    #配置信号
+    # 配置信号
     fileDataChanged = pyqtSignal()
     presetDataChanged = pyqtSignal()
 
@@ -15,6 +15,8 @@ class Config(QConfig):
     tableColumnWidth = ConfigItem('FileTableView', 'ColumnWidth', None)  # 文件列表列宽
     customJavaPath = ConfigItem('Environment', 'CustomJavaPath', '')  # Java路径选项
     useCustomJavaPath = ConfigItem('Environment', 'UseCustomJavaPath', False, BoolValidator())
+    isOpeningJavaPathCorrect = ConfigItem('Environment', 'IsOpeningJavaPathCorrect', True,
+                                          BoolValidator())  # 程序启动时Java路径是否正确
 
     appVersion = ConfigItem('AppVersion', 'Version', '')  # 保存应用版本号
 

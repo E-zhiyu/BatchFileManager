@@ -531,6 +531,10 @@ class HomeInterface(QWidget):
         """将表格的内容保存至文件"""
         logging.info('开始保存文件数据……')
 
+        if not cfg.get(cfg.isOpeningJavaPathCorrect):
+            logging.warning('由于程序启动时Java路径有误，故不保存文件信息')
+            return
+
         # 获取表格内容
         allRows = []
         for row in range(self.fileTableView.rowCount()):
@@ -572,6 +576,7 @@ class HomeInterface(QWidget):
                 duration=1500,
                 parent=self.parentWindow
             )
+            cfg.set(cfg.isOpeningJavaPathCorrect, False)
             logging.error('文件信息读取失败')
             return
 
