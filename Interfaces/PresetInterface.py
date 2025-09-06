@@ -807,12 +807,12 @@ class PresetInterface(QWidget):
             if not fileData:
                 InfoBar.error(
                     '错误',
-                    '无法获取预设文件信息',
+                    '无法获取输入的预设信息',
                     position=InfoBarPosition.TOP,
                     duration=1500,
                     parent=self.parentWindow
                 )
-                logging.error('获取预设信息时出错')
+                logging.error('获取输入的预设信息时出错')
                 return
 
             new_card = PresetCard(title, content, style, len(self.cardList), self)
@@ -986,6 +986,13 @@ class PresetInterface(QWidget):
         logging.info('保存预设中……')
 
         if not cfg.get(cfg.isOpeningJavaPathCorrect):
+            InfoBar.warning(
+                '警告',
+                '无法将预设信息保存至文件，请检查Java路径',
+                position=InfoBarPosition.TOP,
+                duration=1500,
+                parent=self.parentWindow
+            )
             logging.warning('由于程序启动时Java路径有误，故不保存预设内容')
             return
 
