@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QWidget, QHBoxLayout, QFrame, QVBoxLayout, QListWidg
 
 from qfluentwidgets import CardWidget, BodyLabel, CaptionLabel, SwitchButton, PushButton, InfoBar, InfoBarPosition, \
     CommandBar, Action, SmoothScrollArea, Theme, isDarkTheme, MessageBoxBase, ListWidget, ComboBox, LineEdit, \
-    ToolButton, ToolTipFilter, ToolTipPosition, SubtitleLabel, TextBrowser
+    ToolButton, ToolTipFilter, ToolTipPosition, SubtitleLabel, TextBrowser, Dialog
 from qfluentwidgets import FluentIcon as FIF
 
 from Connector.JarConnector import JarConnector
@@ -834,6 +834,11 @@ class PresetInterface(QWidget):
                 parent=self.parentWindow
             )
             return
+
+        w = Dialog('删除预设', '确认删除选中的预设吗')
+        if not w.exec():
+            return
+
         self.changeCurrentCard(-1)  # 重置当前卡片的下标
 
         # 先将后面的卡片下标减一
@@ -843,6 +848,13 @@ class PresetInterface(QWidget):
         card = self.cardLayout.takeAt(card_index).widget()
         card.deleteLater()
         self.cardList.pop(card_index)
+        InfoBar.success(
+            '成功',
+            '已删除选中的预设',
+            position=InfoBarPosition.TOP,
+            duration=1500,
+            parent=self.parentWindow
+        )
 
         self.savePreset()  # 操作结束即保存预设
 

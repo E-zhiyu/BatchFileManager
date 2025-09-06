@@ -34,7 +34,7 @@ public class JsonWriter {
         try {
             jsonArray = new JSONArray(reader.readLine());
         } catch (IOException e) {
-            jsonArray = null;
+            jsonArray = new JSONArray();
         }
 
         return jsonArray;
@@ -74,7 +74,7 @@ public class JsonWriter {
         }
 
         jsonData = jsonWriter.receiveData();
-        if (jsonData == null) {
+        if (jsonData.isEmpty()) {
             jsonWriter.sendFlag(0);
             return;
         }
