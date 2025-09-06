@@ -928,11 +928,15 @@ class PresetInterface(QWidget):
     def loadPreset(self):
         """加载保存到文件的预设"""
         logging.info("加载预设中……")
-        try:
+        jsonReader_cnt = JarConnector('./backend/jsonReader.jar')
+        jsonReader_cnt.sendData(['./config/presets.json'])
+        json_data = jsonReader_cnt.receiveData()
+
+        """try:
             with open('./config/presets.json', 'r', encoding='utf-8') as f:
                 json_data = json.load(f)
         except FileNotFoundError:
-            return
+            return"""
 
         for index, preset in enumerate(json_data):
             title = preset[0]
