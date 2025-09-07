@@ -26,7 +26,7 @@ class SocketClient(QObject):
         super().__init__(parent, *args, **kwargs)
         self.parent = parent
         self.userCommandControl = userCommandControl
-        self.outputTextEdit = outputControl
+        self.outputControl = outputControl
         self.host = host
         self.port = port
         self.command_queue = queue.Queue()
@@ -45,16 +45,16 @@ class SocketClient(QObject):
         self.sock.settimeout(3.0)
         try:
             self.sock.connect((self.host, self.port))
-            self.outputTextEdit.insertPlainText("【BFM】开始与Java文件运行进程通信\n")
+            self.outputControl.insertPlainText("【BFM】开始与Java文件运行进程通信\n")
             logging.info("【BFM】开始与Java文件运行进程通信")
             self.running = True
             self.runningChanged.emit(True)
         except ConnectionRefusedError:
-            self.outputTextEdit.insertPlainText("【BFM】错误: 端口1918被占用，无法连接至服务器\n")
+            self.outputControl.insertPlainText("【BFM】错误: 端口1918被占用，无法连接至服务器\n")
             logging.error('【BFM】错误: 端口1918被占用，无法连接至服务器')
             self.on_close()
         except socket.timeout:
-            self.outputTextEdit.insertPlainText('【BFM】错误：连接子进程超时\n')
+            self.outputControl.insertPlainText('【BFM】错误：连接子进程超时\n')
             logging.warning('【BFM】错误：连接子进程超时')
             self.on_close()
         else:
@@ -72,17 +72,17 @@ class SocketClient(QObject):
             )
             self.send_thread.start()
 
-        cursor = self.outputTextEdit.textCursor()
+        cursor = self.outputControl.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)  # 将光标移动至末尾
-        self.outputTextEdit.setTextCursor(cursor)
+        self.outputControl.setTextCursor(cursor)
 
         self.timer.start(100)  # 每100毫秒更新一次GUI
 
     def send_command(self, custom_cmd: str = ''):
         """将命令放入队列(由发送线程处理)"""
-        cursor = self.outputTextEdit.textCursor()
+        cursor = self.outputControl.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)  # 将光标移动至末尾
-        self.outputTextEdit.setTextCursor(cursor)
+        self.outputControl.setTextCursor(cursor)
 
         if not custom_cmd:
             cmd = self.userCommandControl.text()
@@ -132,10 +132,10 @@ class SocketClient(QObject):
             except queue.Empty:
                 continue
             except socket.timeout:
-                self.outputTextEdit.insertPlainText('【BFM】发送超时\n')
+                self.outputControl.insertPlainText('【BFM】发送超时\n')
                 logging.warning('【BFM】发送超时')
             except Exception as e:
-                self.outputTextEdit.insertPlainText(f"【BFM】发送错误: {str(e)}\n")
+                self.outputControl.insertPlainText(f"【BFM】发送错误: {str(e)}\n")
                 logging.error(f"【BFM】发送错误: {str(e)}")
                 self.on_close()
                 break
@@ -164,18 +164,18 @@ class SocketClient(QObject):
                     self.sock.settimeout(0)  # 成功接收则取消超时
                     self.dataReceived = True
             except ConnectionResetError:
-                self.outputTextEdit.insertPlainText('【BFM】Java文件运行服务已关闭\n')
+                self.outputControl.insertPlainText('【BFM】Java文件运行服务已关闭\n')
                 logging.info('【BFM】Java文件运行服务已关闭')
                 self.on_close()
                 break
             except socket.timeout:
                 if self.rcvTimeoutCount <= 3:
                     self.rcvTimeoutCount += 1
-                    self.outputTextEdit.insertPlainText('【BFM】接收超时\n')
+                    self.outputControl.insertPlainText('【BFM】接收超时\n')
                     logging.warning('【BFM】接收超时')
                 else:
-                    self.outputTextEdit.insertPlainText('【BFM】超时次数过多，文件运行进程已终止\n')
-                    self.outputTextEdit.insertPlainText(
+                    self.outputControl.insertPlainText('【BFM】超时次数过多，文件运行进程已终止\n')
+                    self.outputControl.insertPlainText(
                         '【BFM】提示：使用netstat -ano | findstr \"1918\"以查询端口占用情况\n')
                     logging.error('【BFM】超时次数过多，文件运行进程已终止，请检查1918端口占用情况')
                     self.on_close()
@@ -184,28 +184,27 @@ class SocketClient(QObject):
                 if e.errno == 10035:  # 处理非阻塞错误
                     continue
             except Exception as e:
-                self.outputTextEdit.insertPlainText(f'【BFM】接收错误：{str(e)}\n')
+                self.outputControl.insertPlainText(f'【BFM】接收错误：{str(e)}\n')
                 logging.error(f'【BFM】接收错误：{str(e)}')
                 self.on_close()
                 break
 
     def updateGUI(self):
         """将输出内容队列中的内容合并后更新GUI"""
-        cursor = self.outputTextEdit.textCursor()
-        cursor.movePosition(cursor.MoveOperation.End)  # 将光标移动至末尾
-        self.outputTextEdit.setTextCursor(cursor)
-
         with QMutexLocker(self.mutex):
             if not self.output_queue:
                 return
             batch_text = ''.join(self.output_queue)
             self.output_queue.clear()
 
-        self.outputTextEdit.insertPlainText(batch_text)
+        self.outputControl.append(batch_text[:-2])  # 省去最后一个换行符
 
         # 自动滚动到底部（通过强制使光标可见实现）
         if self.autoScroll:
-            self.outputTextEdit.ensureCursorVisible()
+            cursor = self.outputControl.textCursor()
+            cursor.movePosition(cursor.MoveOperation.End)  # 将光标移动至末尾
+            self.outputControl.setTextCursor(cursor)
+            self.outputControl.ensureCursorVisible()
 
     def on_close(self):
         """关闭应用时的清理工作"""

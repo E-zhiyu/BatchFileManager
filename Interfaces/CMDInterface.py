@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout
 
 from Connector.SocketClient import SocketClient
 from qfluentwidgets import BodyLabel, LineEdit, PlainTextEdit, PushButton, Dialog, InfoBar, InfoBarPosition, CheckBox, \
-    ToolTipFilter, ToolTipPosition
+    ToolTipFilter, ToolTipPosition, TextBrowser
 from qfluentwidgets import FluentIcon as FIF
 
 from Logs.log_recorder import logging
@@ -33,7 +33,7 @@ class CMDInterface(QWidget):
         self.initControls()
 
         # 实例化连接子进程控制台的套接字客户端
-        self.socketClient = SocketClient(self, self.cmdInputLineEdit, self.outputTextEdit)
+        self.socketClient = SocketClient(self, self.cmdInputLineEdit, self.outputControl)
 
         # 设置控件信号连接
         self.sendCommandButton.clicked.connect(self.socketClient.send_command)
@@ -77,21 +77,24 @@ class CMDInterface(QWidget):
         self.autoScrollCheckBox.checkStateChanged.connect(self.setAutoScroll)
         outputLayout.addWidget(self.autoScrollCheckBox, 0, Qt.AlignmentFlag.AlignRight)
 
-        self.outputTextEdit = PlainTextEdit()  # 显示控制台内容的控件
-        self.outputTextEdit.setReadOnly(True)  # 设置为只读状态
-        self.outputTextEdit.document().setMaximumBlockCount(1000)  # 限制最大行数
-        self.mainLayout.addWidget(self.outputTextEdit, 1)
+        self.outputControl = TextBrowser()  # 显示控制台内容的控件
+        self.outputControl.setReadOnly(True)  # 设置为只读状态
+        self.outputControl.document().setMaximumBlockCount(1000)  # 限制最大行数
+        self.mainLayout.addWidget(self.outputControl, 1)
 
     def setAutoScroll(self):
-        flag = self.autoScrollCheckBox.isChecked()
-        logging.info(f'切换自动滚动：{flag}')
-        self.socketClient.autoScroll = flag
+        autoScroll = self.autoScrollCheckBox.isChecked()
+        logging.info(f'切换自动滚动：{autoScroll}')
+        self.socketClient.autoScroll = autoScroll
 
     def startCommunication(self):
         """启动与Java子进程的通信"""
         logging.info('启动控制台通信')
         self.clearOutput()
         self.socketClient.setup_socket()
+
+        autoScroll = self.autoScrollCheckBox.isChecked()
+        self.socketClient.autoScroll = autoScroll
 
     def stopCommunicationAndKill(self, withMessageBox: bool = False):
         """
@@ -116,4 +119,4 @@ class CMDInterface(QWidget):
 
     def clearOutput(self):
         """清空命令输出的内容"""
-        self.outputTextEdit.clear()
+        self.outputControl.clear()
