@@ -358,6 +358,7 @@ class HomeInterface(QWidget):
         currentRowCount = self.fileTableView.rowCount()
 
         self.fileTableView.setSortingEnabled(False)  # 暂时禁用排序防止插入的数据错位
+        self.fileTableView.blockSignals(True)
         self.fileTableView.setRowCount(len(files) + currentRowCount)
         for index, oneInfo in enumerate(file_infos):
             self.fileTableView.setItem(currentRowCount + index, 0, QTableWidgetItem(oneInfo[0]))
@@ -368,6 +369,7 @@ class HomeInterface(QWidget):
             self.fileTableView.setItem(currentRowCount + index, 4, QTableWidgetItem(oneInfo[2]))
             self.fileTableView.setItem(currentRowCount + index, 5, QTableWidgetItem(oneInfo[3]))
         self.fileTableView.setSortingEnabled(True)
+        self.fileTableView.blockSignals(False)
 
         InfoBar.success(
             '成功',
