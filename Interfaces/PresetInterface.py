@@ -1007,7 +1007,7 @@ class PresetInterface(QWidget):
             allPresets.append(onePresetCardInfo)
 
         jsonWriter_cnt = JarConnector('./backend/jsonWriter.jar')
-        jsonWriter_cnt.sendData(['./config/presets.json'], allPresets)
+        jsonWriter_cnt.sendData(['./config/presets.json', allPresets])
         flag = jsonWriter_cnt.receiveData()
 
         if flag:

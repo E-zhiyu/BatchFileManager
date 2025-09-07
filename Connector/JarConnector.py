@@ -27,17 +27,19 @@ class JarConnector:
         )
         logging.info(f'JarConnector成功创建子进程，目标："{self.target}"')
 
-    def sendData(self, *data):
+    def sendData(self, data, close_stdin=True):
         """
         通过标准输入向Java子进程发送数据
         :param data: 待发送的数据列表（不需要换行符）
+        :param close_stdin: 数据发送完毕后是否关闭标准输入流（默认关闭）
         """
         # 将列表转换为JSON字符串并发送
-        for d in data:
-            json_data = json.dumps(d)
-            self.java_process.stdin.write(json_data + '\n')  # 添加换行符作为结束标记
-            self.java_process.stdin.flush()  # 确保数据被发送
-        self.java_process.stdin.close()
+        json_data = json.dumps(data)
+        self.java_process.stdin.write(json_data + '\n')  # 添加换行符作为结束标记
+        self.java_process.stdin.flush()  # 确保数据被发送
+
+        if close_stdin:
+            self.java_process.stdin.close()
         logging.info('JarConnector成功发送数据')
 
     def receiveData(self):

@@ -555,7 +555,7 @@ class HomeInterface(QWidget):
             os.mkdir('./config')
 
         jsonWriter_cnt = JarConnector('./backend/jsonWriter.jar')
-        jsonWriter_cnt.sendData(['./config/fileTableContents.json'], allRows)
+        jsonWriter_cnt.sendData(['./config/fileTableContents.json', allRows])
         flag = jsonWriter_cnt.receiveData()
 
         if flag:

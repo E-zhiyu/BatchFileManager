@@ -3,25 +3,11 @@ package InterfaceFunction.Total;
 import org.json.JSONArray;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class JsonWriter {
-    /**
-     * 设置目标文件路径
-     */
-    public String setTargetFilePath() {
-        String targetFilePath;
-
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        try {
-            JSONArray jsonData = new JSONArray(reader.readLine());
-            targetFilePath = String.valueOf(jsonData.get(0));
-        } catch (IOException e) {
-            targetFilePath = "";
-        }
-
-        return targetFilePath;
-    }
-
     /**
      * 从标准输入获取JSON数据
      *
@@ -29,15 +15,15 @@ public class JsonWriter {
      */
     public JSONArray receiveData() {
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        JSONArray jsonArray;
+        JSONArray jsonData;
 
         try {
-            jsonArray = new JSONArray(reader.readLine());
+            jsonData = new JSONArray(reader.readLine());
         } catch (IOException e) {
-            jsonArray = new JSONArray();
+            jsonData = new JSONArray();
         }
 
-        return jsonArray;
+        return jsonData;
     }
 
     /**
@@ -55,23 +41,28 @@ public class JsonWriter {
      * @param data 需要写入的JSON数组
      */
     public void writeData(String targetFilePath, JSONArray data) {
-        try (FileWriter fileWriter = new FileWriter(targetFilePath)) {
-            fileWriter.write(data.toString(4));
+        Path targetPath = Paths.get(targetFilePath);
+        Path parentDir = targetPath.getParent();
+        
+        try {
+            //生成父文件夹
+            Files.createDirectories(parentDir);
+
+            //创建文件并将数据写入文件
+            try (FileWriter fileWriter = new FileWriter(targetFilePath)) {
+                fileWriter.write(data.toString(4));
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+
     }
 
     public static void main(String[] args) {
         JsonWriter jsonWriter = new JsonWriter();
         String targetFilePath;
-        JSONArray jsonData;
-
-        targetFilePath = jsonWriter.setTargetFilePath();
-        if (targetFilePath.isEmpty()) {
-            jsonWriter.sendFlag(0);
-            return;
-        }
+        JSONArray jsonData, inputData;
 
         jsonData = jsonWriter.receiveData();
         if (jsonData.isEmpty()) {
@@ -79,8 +70,12 @@ public class JsonWriter {
             return;
         }
 
+        //分离目标文件路径和待写入的数据
+        targetFilePath = jsonData.get(0).toString();
+        inputData = (JSONArray) jsonData.get(1);
+
         try {
-            jsonWriter.writeData(targetFilePath, jsonData);
+            jsonWriter.writeData(targetFilePath, inputData);
         } catch (RuntimeException e) {
             jsonWriter.sendFlag(0);
             return;
