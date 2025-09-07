@@ -943,15 +943,21 @@ class PresetInterface(QWidget):
         jsonReader_cnt = JarConnector('./backend/jsonReader.jar')
         jsonReader_cnt.sendData(['./config/presets.json'])
         preset_json_data = jsonReader_cnt.receiveData()
-        if not preset_json_data:
+        if preset_json_data is None:
             InfoBar.error(
                 '错误',
-                '预设加载出错,请检查Java版本',
+                '预设加载出错，请检查Java版本',
                 position=InfoBarPosition.TOP,
                 duration=1500,
                 parent=self.parentWindow
             )
-            logging.error('预设加载出错')
+            logging.error('预设加载出错，请检查Java版本')
+            return
+        elif preset_json_data == -1:
+            logging.warning('预设配置文件不存在')
+            return
+        elif preset_json_data == 0:
+            logging.warning('预设配置文件为空')
             return
 
         logging.info('预设加载成功')

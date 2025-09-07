@@ -570,7 +570,7 @@ class HomeInterface(QWidget):
         jsonReader_cnt = JarConnector('./backend/jsonReader.jar')
         jsonReader_cnt.sendData(['./config/fileTableContents.json'])
         allRows = jsonReader_cnt.receiveData()
-        if not allRows:
+        if allRows is None:
             InfoBar.error(
                 '错误',
                 '文件信息读取出错，请检查Java版本',
@@ -580,6 +580,14 @@ class HomeInterface(QWidget):
             )
             cfg.set(cfg.isOpeningJavaPathCorrect, False)
             logging.error('文件信息读取失败')
+            return
+        elif allRows == 0:
+            cfg.set(cfg.isOpeningJavaPathCorrect, True)
+            logging.warning('文件信息配置文件为空')
+            return
+        elif allRows == -1:
+            cfg.set(cfg.isOpeningJavaPathCorrect, True)
+            logging.warning('文件信息配置文件不存在')
             return
 
         logging.info('文件信息读取成功')

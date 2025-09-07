@@ -3,10 +3,7 @@ package InterfaceFunction.Total;
 import org.json.JSONArray;
 import org.json.JSONTokener;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 
 public class JsonReader {
     /**
@@ -69,8 +66,8 @@ public class JsonReader {
         JsonReader jsonReader = new JsonReader();
 
         targetFilePath = jsonReader.setTargetFilePath();
-        if (targetFilePath.isEmpty()) {
-            jsonReader.sendFlag(0);
+        if (!new File(targetFilePath).isFile()) {
+            jsonReader.sendFlag(-1);
         }
 
         jsonData = jsonReader.readJsonFile(targetFilePath);
